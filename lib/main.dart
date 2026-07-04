@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:project_fuel/core/routes/app_routes.dart';
 import 'package:project_fuel/core/routes/route_generator.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const ProjectFuelApp());
 }
 
