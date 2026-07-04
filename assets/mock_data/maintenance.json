@@ -1,0 +1,237 @@
+[
+  {
+    "id": "MNT-001",
+    "vehicleId": "FL-2042",
+    "vehicleName": "Truck #FL-2042",
+    "type": "Oil Change",
+    "description": "Regular scheduled oil change and filter replacement",
+    "status": "scheduled",
+    "priority": "medium",
+    "scheduledDate": "2026-07-10T08:00:00.000",
+    "completedDate": null,
+    "cost": 450.0,
+    "notes": [],
+    "assignedTo": "Mike Rodriguez",
+    "createdAt": "2026-06-28T10:30:00.000"
+  },
+  {
+    "id": "MNT-002",
+    "vehicleId": "FL-1078",
+    "vehicleName": "Truck #FL-1078",
+    "type": "Brake Inspection",
+    "description": "Annual brake system inspection - pads, rotors, fluid levels",
+    "status": "inProgress",
+    "priority": "high",
+    "scheduledDate": "2026-07-05T09:00:00.000",
+    "completedDate": null,
+    "cost": 1200.0,
+    "notes": [
+      {
+        "id": "N-001",
+        "author": "Mike Rodriguez",
+        "note": "Found rear brake pads worn beyond threshold. Replacing pads and resurfacing rotors.",
+        "timestamp": "2026-07-05T11:15:00.000"
+      }
+    ],
+    "assignedTo": "Mike Rodriguez",
+    "createdAt": "2026-06-25T14:00:00.000"
+  },
+  {
+    "id": "MNT-003",
+    "vehicleId": "FL-3091",
+    "vehicleName": "Truck #FL-3091",
+    "type": "Engine Diagnostics",
+    "description": "Check engine light on - diagnostic scan and troubleshooting",
+    "status": "inProgress",
+    "priority": "critical",
+    "scheduledDate": "2026-07-03T07:30:00.000",
+    "completedDate": null,
+    "cost": 2500.0,
+    "notes": [
+      {
+        "id": "N-002",
+        "author": "Sarah Chen",
+        "note": "OBD-II scan shows P0302 - cylinder 2 misfire. Inspecting spark plugs and ignition coil.",
+        "timestamp": "2026-07-03T09:45:00.000"
+      },
+      {
+        "id": "N-003",
+        "author": "Sarah Chen",
+        "note": "Found damaged ignition coil on cylinder 2. Replacing coil pack. Will run compression test.",
+        "timestamp": "2026-07-03T14:20:00.000"
+      }
+    ],
+    "assignedTo": "Sarah Chen",
+    "createdAt": "2026-06-22T08:15:00.000"
+  },
+  {
+    "id": "MNT-004",
+    "vehicleId": "FL-1567",
+    "vehicleName": "Truck #FL-1567",
+    "type": "Tire Replacement",
+    "description": "All six tires need replacement - tread depth below legal limit",
+    "status": "scheduled",
+    "priority": "high",
+    "scheduledDate": "2026-07-12T08:00:00.000",
+    "completedDate": null,
+    "cost": 3600.0,
+    "notes": [],
+    "assignedTo": "Mike Rodriguez",
+    "createdAt": "2026-06-20T16:00:00.000"
+  },
+  {
+    "id": "MNT-005",
+    "vehicleId": "FL-4523",
+    "vehicleName": "Truck #FL-4523",
+    "type": "Transmission Service",
+    "description": "Transmission fluid flush and filter replacement",
+    "status": "completed",
+    "priority": "medium",
+    "scheduledDate": "2026-06-28T08:00:00.000",
+    "completedDate": "2026-06-28T14:30:00.000",
+    "cost": 1800.0,
+    "notes": [
+      {
+        "id": "N-004",
+        "author": "Sarah Chen",
+        "note": "Completed transmission flush. Replaced filter and gasket. Test drive confirmed smooth shifting.",
+        "timestamp": "2026-06-28T14:30:00.000"
+      }
+    ],
+    "assignedTo": "Sarah Chen",
+    "createdAt": "2026-06-15T11:00:00.000"
+  },
+  {
+    "id": "MNT-006",
+    "vehicleId": "FL-5890",
+    "vehicleName": "Truck #FL-5890",
+    "type": "AC Repair",
+    "description": "Air conditioning not cooling properly - refrigerant recharge needed",
+    "status": "scheduled",
+    "priority": "low",
+    "scheduledDate": "2026-07-14T10:00:00.000",
+    "completedDate": null,
+    "cost": 350.0,
+    "notes": [],
+    "assignedTo": "James Wilson",
+    "createdAt": "2026-07-01T09:30:00.000"
+  },
+  {
+    "id": "MNT-007",
+    "vehicleId": "FL-3321",
+    "vehicleName": "Truck #FL-3321",
+    "type": "Electrical System",
+    "description": "Battery keeps draining overnight - parasitic draw diagnosis",
+    "status": "inProgress",
+    "priority": "high",
+    "scheduledDate": "2026-07-06T07:00:00.000",
+    "completedDate": null,
+    "cost": 800.0,
+    "notes": [
+      {
+        "id": "N-005",
+        "author": "James Wilson",
+        "note": "Performed parasitic draw test. Found 0.35A draw from aftermarket GPS tracker. Re-routing power source.",
+        "timestamp": "2026-07-06T10:30:00.000"
+      }
+    ],
+    "assignedTo": "James Wilson",
+    "createdAt": "2026-07-02T13:45:00.000"
+  },
+  {
+    "id": "MNT-008",
+    "vehicleId": "FL-6701",
+    "vehicleName": "Truck #FL-6701",
+    "type": "Annual Inspection",
+    "description": "Annual DOT compliance inspection - brakes, lights, suspension, emissions",
+    "status": "completed",
+    "priority": "high",
+    "scheduledDate": "2026-06-25T08:00:00.000",
+    "completedDate": "2026-06-25T16:00:00.000",
+    "cost": 950.0,
+    "notes": [
+      {
+        "id": "N-006",
+        "author": "Mike Rodriguez",
+        "note": "All systems passed inspection. Replaced one taillight bulb. Certificate valid for 12 months.",
+        "timestamp": "2026-06-25T16:00:00.000"
+      }
+    ],
+    "assignedTo": "Mike Rodriguez",
+    "createdAt": "2026-06-10T10:00:00.000"
+  },
+  {
+    "id": "MNT-009",
+    "vehicleId": "FL-8912",
+    "vehicleName": "Truck #FL-8912",
+    "type": "Suspension Repair",
+    "description": "Front suspension clunking noise - possible worn bushings or struts",
+    "status": "scheduled",
+    "priority": "medium",
+    "scheduledDate": "2026-07-18T08:00:00.000",
+    "completedDate": null,
+    "cost": 2100.0,
+    "notes": [],
+    "assignedTo": "Sarah Chen",
+    "createdAt": "2026-07-05T11:20:00.000"
+  },
+  {
+    "id": "MNT-010",
+    "vehicleId": "FL-2042",
+    "vehicleName": "Truck #FL-2042",
+    "type": "Coolant System",
+    "description": "Coolant leak near radiator - pressure test and repair",
+    "status": "completed",
+    "priority": "critical",
+    "scheduledDate": "2026-06-20T07:00:00.000",
+    "completedDate": "2026-06-20T13:00:00.000",
+    "cost": 650.0,
+    "notes": [
+      {
+        "id": "N-007",
+        "author": "James Wilson",
+        "note": "Found crack in upper radiator hose. Replaced hose and refilled coolant. Pressure test confirmed no further leaks.",
+        "timestamp": "2026-06-20T13:00:00.000"
+      }
+    ],
+    "assignedTo": "James Wilson",
+    "createdAt": "2026-06-18T15:00:00.000"
+  },
+  {
+    "id": "MNT-011",
+    "vehicleId": "FL-4523",
+    "vehicleName": "Truck #FL-4523",
+    "type": "Fuel System",
+    "description": "Fuel injector cleaning and fuel filter replacement",
+    "status": "scheduled",
+    "priority": "low",
+    "scheduledDate": "2026-07-22T09:00:00.000",
+    "completedDate": null,
+    "cost": 500.0,
+    "notes": [],
+    "assignedTo": "Mike Rodriguez",
+    "createdAt": "2026-07-08T08:00:00.000"
+  },
+  {
+    "id": "MNT-012",
+    "vehicleId": "FL-1078",
+    "vehicleName": "Truck #FL-1078",
+    "type": "Alignment & Balance",
+    "description": "Vehicle pulls to the right - wheel alignment and tire balance",
+    "status": "completed",
+    "priority": "medium",
+    "scheduledDate": "2026-06-15T08:00:00.000",
+    "completedDate": "2026-06-15T11:00:00.000",
+    "cost": 300.0,
+    "notes": [
+      {
+        "id": "N-008",
+        "author": "Mike Rodriguez",
+        "note": "Front toe adjustment needed. Set to factory spec. Test drive confirmed straight tracking.",
+        "timestamp": "2026-06-15T11:00:00.000"
+      }
+    ],
+    "assignedTo": "Mike Rodriguez",
+    "createdAt": "2026-06-12T09:00:00.000"
+  }
+]

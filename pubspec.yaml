@@ -42,6 +42,7 @@ dependencies:
   sidebarx: ^0.17.2
   water_drop_nav_bar: ^2.2.2
   http: ^1.6.0
+  chartify: ^1.0.2
 
 dev_dependencies:
   flutter_test:
@@ -69,7 +70,7 @@ flutter:
   assets:
   - assets/mock_data/authentication.json
   - assets/mock_data/truck_navigation.json
-
+  - assets/mock_data/maintenance.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
