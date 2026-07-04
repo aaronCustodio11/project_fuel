@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:project_fuel/features/authentication/login_screen.dart';
 import 'package:project_fuel/features/authentication/splash_screen.dart';
 import 'package:project_fuel/features/driver/driver_dashboard.dart';
+import 'package:project_fuel/features/authentication/login_screen.dart';
+import 'package:project_fuel/features/authentication/splash_screen.dart';
+import 'package:project_fuel/features/user_dashboard.dart';
 
 import 'app_routes.dart';
 
@@ -12,11 +15,14 @@ class RouteGenerator {
     switch (settings.name) {
       case AppRoutes.splash:
         return _buildRoute(settings, const SplashScreenPage());
+        return _buildRoute(settings, const SplashScreenPage());
 
       case AppRoutes.login:
         return _buildRoute(settings, const LoginScreenPage());
+        return _buildRoute(settings, const LoginScreenPage());
 
       case AppRoutes.register:
+        return _buildRoute(settings, const PlaceholderPage(title: 'Register'));
         return _buildRoute(settings, const PlaceholderPage(title: 'Register'));
 
       case AppRoutes.driverHome:
@@ -36,15 +42,27 @@ class RouteGenerator {
 
       case AppRoutes.profile:
         return _buildRoute(settings, const PlaceholderPage(title: 'Profile'));
+      case AppRoutes.userDashboard:
+        return _buildRoute(
+          settings,
+          const UserDashboard(),
+        );
+
+      case AppRoutes.profile:
+        return _buildRoute(settings, const PlaceholderPage(title: 'Profile'));
 
       case AppRoutes.settings:
+        return _buildRoute(settings, const PlaceholderPage(title: 'Settings'));
         return _buildRoute(settings, const PlaceholderPage(title: 'Settings'));
 
       default:
         return _buildRoute(settings, const UnknownRoutePage());
+        return _buildRoute(settings, const UnknownRoutePage());
     }
   }
 
+  static MaterialPageRoute _buildRoute(RouteSettings settings, Widget page) {
+    return MaterialPageRoute(settings: settings, builder: (_) => page);
   static MaterialPageRoute _buildRoute(RouteSettings settings, Widget page) {
     return MaterialPageRoute(settings: settings, builder: (_) => page);
   }
@@ -54,10 +72,13 @@ class PlaceholderPage extends StatelessWidget {
   final String title;
 
   const PlaceholderPage({super.key, required this.title});
+  const PlaceholderPage({super.key, required this.title});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(child: Text(title, style: const TextStyle(fontSize: 24))),
       appBar: AppBar(title: Text(title)),
       body: Center(child: Text(title, style: const TextStyle(fontSize: 24))),
     );
@@ -71,9 +92,12 @@ class UnknownRoutePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('404')),
+      appBar: AppBar(title: const Text('404')),
       body: const Center(
+        child: Text('Page not found', style: TextStyle(fontSize: 20)),
         child: Text('Page not found', style: TextStyle(fontSize: 20)),
       ),
     );
   }
 }
+
