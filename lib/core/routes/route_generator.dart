@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project_fuel/features/authentication/login_screen.dart';
 import 'package:project_fuel/features/authentication/splash_screen.dart';
+import 'package:project_fuel/features/user_dashboard.dart';
 
 import 'app_routes.dart';
 
@@ -34,6 +35,12 @@ class RouteGenerator {
         return _buildRoute(
           settings,
           const PlaceholderPage(title: 'Supplier Dashboard'),
+        );
+
+      case AppRoutes.userDashboard:
+        return _buildRoute(
+          settings,
+          const UserDashboard(),
         );
 
       case AppRoutes.profile:

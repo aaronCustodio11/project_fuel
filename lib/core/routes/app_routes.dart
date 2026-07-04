@@ -1,3 +1,5 @@
+import 'package:project_fuel/features/user_dashboard.dart';
+
 class AppRoutes {
   AppRoutes._();
 
@@ -18,4 +20,6 @@ class AppRoutes {
   // Shared
   static const profile = '/profile';
   static const settings = '/settings';
+
+  static const userDashboard = '/user_dashboard';
 }
