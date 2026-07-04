@@ -1,31 +1,7 @@
+export 'package:project_fuel/core/models/auth_user.dart';
+import 'package:project_fuel/core/models/auth_user.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-class AuthUser {
-  const AuthUser({
-    required this.userId,
-    required this.firstName,
-    required this.surName,
-    required this.email,
-    required this.role,
-    required this.company,
-    this.supplierId,
-    this.latitude,  // Added
-    this.longitude, // Added
-  });
-
-  final int userId;
-  final String firstName;
-  final String surName;
-  final String email;
-  final String role;
-  final String company;
-  final int? supplierId;
-  final double? latitude;  // Added
-  final double? longitude; // Added
-
-  String get fullName => '$firstName $surName'.trim();
-}
 
 class AuthenticationService {
   AuthenticationService({JsonReaderService? jsonReader}) : _jsonReader = jsonReader;

@@ -4,7 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:project_fuel/core/models/fleet_tracking.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
-import 'package:project_fuel/shared/widgets/sidebar.dart';
+import 'package:project_fuel/shared/widgets/role_badge.dart';
 
 class SupplierFleetTracking extends StatefulWidget {
   const SupplierFleetTracking({super.key});
@@ -90,14 +90,7 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLow,
       body: SafeArea(
-        child: RepaintBoundary(
-          child: Row(
-            children: [
-              const Sidebar(initialIndex: 3),
-              Expanded(child: _buildContent(context)),
-            ],
-          ),
-        ),
+        child: _buildContent(context),
       ),
     );
   }
@@ -236,36 +229,22 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
   Marker _buildTruckMarker(FleetTruck truck) {
     final color = _truckStatusColor(truck.status);
     final selected = _selectedItem == truck;
+    final size = selected ? 56.0 : 48.0;
     return Marker(
       point: truck.position,
-      width: 52,
-      height: 52,
-      child: GestureDetector(
-        onTap: () => _onItemTap(truck),
-        child: Material(
-          color: Colors.transparent,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: selected ? 52 : 44,
-            height: selected ? 52 : 44,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: selected ? 4 : 3),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: selected ? 0.6 : 0.4),
-                  blurRadius: selected ? 12 : 8,
-                  spreadRadius: selected ? 2 : 1,
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.local_shipping,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
+      width: size + 8,
+      height: size + 8,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: size,
+        height: size,
+        child: RoleBadge(
+          icon: Icons.local_shipping_rounded,
+          color: color,
+          onTap: () => _onItemTap(truck),
+          borderWidth: selected ? 4 : 3,
+          glowOpacity: selected ? 0.6 : 0.4,
+          size: selected ? 48 : 44,
         ),
       ),
     );
@@ -274,36 +253,22 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
   Marker _buildStationMarker(FleetStation station) {
     final isGas = station.type == StationType.gasStation;
     final selected = _selectedItem == station;
+    final size = selected ? 56.0 : 48.0;
     return Marker(
       point: station.position,
-      width: 52,
-      height: 52,
-      child: GestureDetector(
-        onTap: () => _onItemTap(station),
-        child: Material(
-          color: Colors.transparent,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: selected ? 52 : 44,
-            height: selected ? 52 : 44,
-            decoration: BoxDecoration(
-              color: isGas ? AppTheme.accentBlue : AppTheme.brandGreen,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: selected ? 4 : 3),
-              boxShadow: [
-                BoxShadow(
-                  color: (isGas ? AppTheme.accentBlue : AppTheme.brandGreen).withValues(alpha: selected ? 0.6 : 0.4),
-                  blurRadius: selected ? 12 : 8,
-                  spreadRadius: selected ? 2 : 1,
-                ),
-              ],
-            ),
-            child: Icon(
-              isGas ? Icons.local_gas_station : Icons.warehouse_outlined,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
+      width: size + 8,
+      height: size + 8,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: size,
+        height: size,
+        child: RoleBadge(
+          icon: isGas ? Icons.local_gas_station_rounded : Icons.warehouse_outlined,
+          color: isGas ? AppTheme.accentBlue : AppTheme.brandGreen,
+          onTap: () => _onItemTap(station),
+          borderWidth: selected ? 4 : 3,
+          glowOpacity: selected ? 0.6 : 0.4,
+          size: selected ? 48 : 44,
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project_fuel/core/routes/app_routes.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
+import 'package:project_fuel/shared/widgets/logout_dialog.dart';
 
 class ProfileScreenPage extends StatefulWidget {
   const ProfileScreenPage({super.key});
@@ -32,6 +33,10 @@ class _ProfileScreenPageState extends State<ProfileScreenPage> {
   }
 
   Future<void> _handleLogout() async {
+    final confirmed = await showLogoutConfirmationDialog(context);
+    if (!confirmed) return;
+    if (!mounted) return;
+
     await _authService.logout();
     if (!mounted) return;
 
@@ -43,26 +48,34 @@ class _ProfileScreenPageState extends State<ProfileScreenPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final isWide = MediaQuery.sizeOf(context).width >= 900;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surfaceContainerLow,
-      appBar: AppBar(
-        title: const Text('Profile'),
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-      ),
+      backgroundColor: scheme.surfaceContainerLow,
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1200),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(FleetSpacing.xl),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _buildContent(theme, isWide),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(FleetSpacing.xl, FleetSpacing.xl, FleetSpacing.xl, 0),
+              child: Text('Profile', style: theme.textTheme.headlineLarge),
             ),
-          ),
+            const SizedBox(height: FleetSpacing.md),
+            Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1200),
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : SingleChildScrollView(
+                          padding: const EdgeInsets.all(FleetSpacing.xl),
+                          child: _buildContent(theme, isWide),
+                        ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -199,47 +212,59 @@ class _ProfileScreenPageState extends State<ProfileScreenPage> {
   }
 
   Widget _buildActionsCard(ThemeData theme) {
+    final scheme = theme.colorScheme;
+    final themeMode = ThemeProvider.read(context);
+    final isLight = themeMode == ThemeMode.light ||
+        (themeMode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.light);
+    final themeIcon = isLight ? Icons.dark_mode_outlined : Icons.light_mode_outlined;
+    final themeLabel = isLight ? 'Dark mode' : 'Light mode';
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(FleetSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Account actions', style: theme.textTheme.headlineSmall),
+            Text('Account', style: theme.textTheme.headlineSmall),
             const SizedBox(height: FleetSpacing.sm),
             Text(
-              'Use these controls to manage your account details.',
+              'Manage your account settings.',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+                color: scheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: FleetSpacing.lg),
-            FilledButton.icon(
-              onPressed: null,
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit user details'),
-            ),
-            const SizedBox(height: FleetSpacing.md),
             OutlinedButton.icon(
               onPressed: null,
               icon: const Icon(Icons.lock_outline),
               label: const Text('Change password'),
             ),
-            const SizedBox(height: FleetSpacing.md),
-            FilledButton.icon(
-              onPressed: _handleLogout,
-              icon: const Icon(Icons.logout_outlined),
-              label: const Text('Logout'),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.dangerRed,
-                foregroundColor: Colors.white,
+            const SizedBox(height: FleetSpacing.xl),
+            Text('Appearance', style: theme.textTheme.headlineSmall),
+            const SizedBox(height: FleetSpacing.sm),
+            Text(
+              'Customise your display preferences.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: FleetSpacing.md),
-            Text(
-              'Only the logout action is currently enabled.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            const SizedBox(height: FleetSpacing.lg),
+            OutlinedButton.icon(
+              onPressed: () => ThemeProvider.toggle(context),
+              icon: Icon(themeIcon),
+              label: Text(themeLabel),
+            ),
+            const SizedBox(height: FleetSpacing.xl),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _handleLogout,
+                icon: const Icon(Icons.logout_outlined),
+                label: const Text('Logout'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.dangerRed,
+                  foregroundColor: Colors.white,
+                ),
               ),
             ),
           ],

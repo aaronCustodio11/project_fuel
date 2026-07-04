@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
-import 'package:project_fuel/shared/widgets/sidebar.dart';
 
 String? _coerceStringValue(Object? value) {
   if (value == null) return null;
@@ -298,22 +297,12 @@ class _UserDashboardState extends State<UserDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    // SidebarX is a nav rail only (unlike CollapsibleSidebar, it doesn't
-    // own the page body), so it sits as a sibling in a Row alongside
-    // the dashboard content.
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLow,
       body: SafeArea(
-        child: RepaintBoundary(
-          child: Row(
-            children: [
-              const Sidebar(initialIndex: 1),
-              Expanded(child: _buildDashboardContent(context)),
-            ],
-          ),
-        ),
+        child: _buildDashboardContent(context),
       ),
     );
   }

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:project_fuel/core/models/maintenance.dart';
 import 'package:project_fuel/core/services/maintenance_service.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
-import 'package:project_fuel/shared/widgets/sidebar.dart';
 
 class SupplierMaintenance extends StatefulWidget {
   const SupplierMaintenance({super.key});
@@ -282,14 +281,7 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLow,
       body: SafeArea(
-        child: RepaintBoundary(
-          child: Row(
-            children: [
-              const Sidebar(initialIndex: 2),
-              Expanded(child: _buildContent(context)),
-            ],
-          ),
-        ),
+        child: _buildContent(context),
       ),
     );
   }

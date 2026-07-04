@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:project_fuel/features/authentication/login_screen.dart';
-import 'package:project_fuel/features/authentication/splash_screen.dart';
-import 'package:project_fuel/features/driver/driver_dashboard.dart';
-import 'package:project_fuel/features/profile/profile_screen.dart';
-import 'package:project_fuel/features/supplier/user_dashboard.dart';
-import 'package:project_fuel/features/supplier/supplier_dashboard.dart';
-import 'package:project_fuel/features/supplier/supplier_fleet_tracking.dart';
-import 'package:project_fuel/features/supplier/supplier_maintenance.dart';
-import 'package:project_fuel/features/supplier/supplier_theft_detection.dart';
+import 'package:project_fuel/features/authentication/pages/login_page.dart';
+import 'package:project_fuel/features/authentication/pages/splash_page.dart';
+import 'package:project_fuel/features/driver/driver_screen.dart';
+import 'package:project_fuel/features/manager/manager_screen.dart';
+import 'package:project_fuel/features/profile/pages/profile_page.dart';
+import 'package:project_fuel/features/supplier/supplier_screen.dart';
 
 import 'app_routes.dart';
 
@@ -26,28 +23,13 @@ class RouteGenerator {
         return _buildRoute(settings, const PlaceholderPage(title: 'Register'));
 
       case AppRoutes.driverHome:
-        return _buildRoute(settings, const DriverDashboardPage());
+        return _buildRoute(settings, const DriverScreen());
 
       case AppRoutes.managerHome:
-        return _buildRoute(
-          settings,
-          const PlaceholderPage(title: 'Station Manager Dashboard'),
-        );
+        return _buildRoute(settings, const ManagerScreen());
 
       case AppRoutes.supplierHome:
-        return _buildRoute(settings, const SupplierDashboard());
-
-      case AppRoutes.userDashboard:
-        return _buildRoute(settings, const UserDashboard());
-
-      case AppRoutes.supplierMaintenance:
-        return _buildRoute(settings, const SupplierMaintenance());
-
-      case AppRoutes.supplierFleetTracking:
-        return _buildRoute(settings, const SupplierFleetTracking());
-
-      case AppRoutes.supplierTheftDetection:
-        return _buildRoute(settings, const SupplierTheftDetection());
+        return _buildRoute(settings, const SupplierScreen());
 
       case AppRoutes.profile:
         return _buildRoute(settings, const ProfileScreenPage());

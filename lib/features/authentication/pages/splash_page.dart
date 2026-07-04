@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:project_fuel/core/routes/app_routes.dart';
 import 'package:project_fuel/core/services/authentication.dart';
+import 'package:project_fuel/core/theme/app_theme.dart';
 
 class SplashScreenPage extends StatefulWidget {
   const SplashScreenPage({super.key});
@@ -35,41 +36,44 @@ class _SplashScreenPageState extends State<SplashScreenPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF0F4C81), Color(0xFF1E88E5)],
+            colors: [scheme.primary.withValues(alpha: 0.85), scheme.primary],
           ),
         ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.local_gas_station,
                 size: 88,
-                color: Colors.white,
+                color: scheme.onPrimary,
               ),
-              const SizedBox(height: 20),
-              const Text(
+              const SizedBox(height: FleetSpacing.lg),
+              Text(
                 'FleetSense',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                style: textTheme.displayLarge?.copyWith(
+                  color: scheme.onPrimary,
                 ),
               ),
-              const SizedBox(height: 10),
-              const Text(
+              const SizedBox(height: FleetSpacing.sm),
+              Text(
                 'Fuel delivery coordination made simple',
-                style: TextStyle(fontSize: 16, color: Colors.white70),
+                style: textTheme.bodyLarge?.copyWith(
+                  color: scheme.onPrimary.withValues(alpha: 0.7),
+                ),
               ),
-              const SizedBox(height: 30),
-              const CircularProgressIndicator(
-                color: Colors.white,
+              const SizedBox(height: FleetSpacing.xl),
+              CircularProgressIndicator(
+                color: scheme.onPrimary,
                 strokeWidth: 3,
               ),
             ],

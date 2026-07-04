@@ -14,11 +14,6 @@ class AppRoutes {
 
   // Supplier
   static const supplierHome = '/supplier/home';
-  static const userDashboard = '/supplier/user_dashboard';
-
-  static const supplierMaintenance = '/supplier/maintenance';
-  static const supplierFleetTracking = '/supplier/fleet_tracking';
-  static const supplierTheftDetection = '/supplier/theft_detection';
 
   // Shared
   static const profile = '/profile';

@@ -35,17 +35,27 @@ class _VehicleMaintenancePageState extends State<VehicleMaintenancePage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surfaceContainerLow,
-      appBar: AppBar(
-        title: const Text('Vehicle Maintenance'),
-        centerTitle: true,
-        automaticallyImplyLeading: false,
+      backgroundColor: scheme.surfaceContainerLow,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(FleetSpacing.xl, FleetSpacing.xl, FleetSpacing.xl, 0),
+              child: Text('Vehicle Maintenance', style: theme.textTheme.headlineLarge),
+            ),
+            const SizedBox(height: FleetSpacing.md),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildContent(theme),
+            ),
+          ],
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _buildContent(theme),
     );
   }
 

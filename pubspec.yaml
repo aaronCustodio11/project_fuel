@@ -69,7 +69,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
   - assets/mock_data/authentication.json
-  - assets/mock_data/truck_navigation.json
+  - assets/mock_data/vehicles.json
   - assets/mock_data/maintenance.json
 
   # An image asset can refer to one or more resolution-specific "variants", see

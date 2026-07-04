@@ -1,477 +1,134 @@
 # FleetSense
 
-**FleetSense** is a high-fidelity mobile application prototype developed using the **Flutter framework**. The application is designed to streamline communication and coordination between three primary stakeholders involved in fuel delivery operations:
-
-- 🚚 **Tanker Truck Driver**
-- ⛽ **Gas Station Manager**
-- 🏢 **Fuel Supplier**
-
-This project focuses on demonstrating user interface design, navigation flow, and feature interaction rather than implementing a complete production backend. A lightweight local JSON database is used to simulate data storage and authentication.
+A Flutter prototype for fuel delivery operations, connecting tanker truck drivers, gas station managers, and fuel suppliers. Uses local JSON files for mock data.
 
 ---
 
-# Project Structure
+## Project Structure
 
 ```
 lib/
+├── main.dart                          # App entry point
+├── core/                              # Shared infrastructure
+│   ├── models/                        # Data classes
+│   │   ├── fleet_tracking.dart
+│   │   ├── maintenance.dart
+│   │   ├── auth_user.dart             # AuthUser
+│   │   └── truck.dart                 # TruckModel, DeliveryModel
+│   ├── routes/                        # Navigation
+│   │   ├── app_routes.dart            # Route name constants
+│   │   └── route_generator.dart       # onGenerateRoute handler
+│   ├── services/                      # Business logic & data access
+│   │   ├── authentication.dart        # AuthUser, AuthenticationService
+│   │   ├── deliveries.dart            # DeliveryService
+│   │   ├── json_reader.dart           # Reads mock JSON assets
+│   │   ├── maintenance_service.dart
+│   │   └── osrm_routing.dart          # OSRM API client
+│   └── theme/
+│       └── app_theme.dart             # Light/dark Material 3 themes
 │
-├── main.dart
-├── app.dart
-│
-├── core/
-│   ├── constants/
-│   ├── theme/
-│   ├── routes/
-│   ├── services/
-│   ├── utils/
-│   └── widgets/
-│
-├── data/
-│   ├── json/
-│   ├── models/
-│   ├── repositories/
-│   └── local_database/
-│
-├── features/
+├── features/                          # Feature-first modules
 │   ├── authentication/
+│   │   └── pages/
+│   │       ├── login_page.dart
+│   │       └── splash_page.dart
 │   ├── driver/
-│   ├── station_manager/
-│   ├── supplier/
-│   ├── notifications/
+│   │   ├── driver_screen.dart         # Shell with bottom nav + IndexedStack
+│   │   ├── pages/
+│   │   │   ├── map_page.dart          # Live map, route, stops tracker
+│   │   │   ├── deliveries_page.dart   # Delivery stats & history
+│   │   │   └── maintenance_page.dart  # Vehicle maintenance schedule
+│   │   └── widgets/                   # Driver-specific components
 │   ├── profile/
-│   └── settings/
+│   │   └── pages/
+│   │       └── profile_page.dart
+│   ├── manager/
+│   │   ├── manager_screen.dart        # Shell with sidebar + IndexedStack
+│   │   ├── pages/
+│   │   │   ├── dashboard_page.dart
+│   │   │   ├── fuel_monitoring_page.dart
+│   │   │   └── theft_detection_page.dart
+│   │   └── widgets/                   # Manager-specific components
+│   └── supplier/
+│       ├── supplier_screen.dart       # Shell with sidebar + IndexedStack
+│       ├── pages/
+│       │   ├── dashboard_page.dart
+│       │   ├── fleet_tracking_page.dart
+│       │   ├── maintenance_page.dart
+│       │   ├── theft_detection_page.dart
+│       │   └── user_dashboard_page.dart
+│       └── widgets/                   # Supplier-specific components
 │
-├── shared/
-│   ├── widgets/
-│   ├── models/
-│   └── providers/
-│
-└── assets/
-    ├── images/
-    ├── icons/
-    ├── animations/
-    └── mock_data/
-```
+└── shared/
+    └── widgets/
+        ├── bottom_nav_bar.dart        # WaterDropNavBar wrapper
+        ├── logout_dialog.dart         # Confirmation dialog
+        ├── role_badge.dart            # Color-coded marker with glow
+        └── sidebar.dart               # Collapsible sidebar with items prop
 
----
-
-# Directory Overview
-
-## `main.dart`
-
-Application entry point that launches the Flutter application.
-
----
-
-## `app.dart`
-
-Contains the root application configuration including:
-
-- MaterialApp
-- Application theme
-- Initial route
-- Route configuration
-
----
-
-# Core
-
-The **core** directory contains reusable resources that are shared across the entire application.
-
-```
-core/
-```
-
-### `constants/`
-
-Stores application-wide constants.
-
-Examples:
-
-- Colors
-- Strings
-- User roles
-- API constants
-
----
-
-### `theme/`
-
-Contains the application's visual styling.
-
-Examples:
-
-- Color palette
-- Typography
-- Button themes
-- Input decoration themes
-
----
-
-### `routes/`
-
-Responsible for application navigation.
-
-Contains:
-
-- Named routes
-- Route generator
-- Navigation configuration
-
----
-
-### `services/`
-
-Provides reusable services used throughout the application.
-
-Examples:
-
-- Authentication service
-- JSON reader
-- Notification service
-- Location service
-
----
-
-### `utils/`
-
-Utility functions and helper classes.
-
-Examples:
-
-- Validators
-- Date formatting
-- Extensions
-- Common helper methods
-
----
-
-### `widgets/`
-
-Reusable widgets shared across multiple screens.
-
-Examples:
-
-- Custom buttons
-- Custom text fields
-- Loading indicators
-- Cards
-- Dialogs
-
----
-
-# Data
-
-The **data** folder stores models and handles local data access.
-
-```
-data/
-```
-
----
-
-## `json/`
-
-Contains mock JSON files used as a lightweight local database.
-
-Examples:
-
-```
-users.json
-stations.json
-deliveries.json
-notifications.json
-fuel_inventory.json
-```
-
----
-
-## `models/`
-
-Defines the application's data models.
-
-Examples:
-
-- User
-- Driver
-- Delivery
-- Station
-- Truck
-- Notification
-
----
-
-## `repositories/`
-
-Acts as the bridge between the UI and local JSON data.
-
-Responsibilities include:
-
-- Reading JSON
-- Parsing models
-- Returning data to the application
-
----
-
-## `local_database/`
-
-Provides helper classes for local storage implementation.
-
-This layer can later be replaced with:
-
-- SQLite
-- Hive
-- Firebase
-- REST API
-
-without affecting the application's presentation layer.
-
----
-
-# Features
-
-The application is organized using a **feature-first architecture**, where each major system has its own module.
-
----
-
-## `authentication/`
-
-Handles user authentication.
-
-Includes:
-
-- Login
-- Registration
-- Forgot Password
-- Role selection
-
----
-
-## `driver/`
-
-Features available to tanker truck drivers.
-
-Examples:
-
-- Dashboard
-- Assigned deliveries
-- Route information
-- Delivery history
-- Delivery status updates
-
----
-
-## `station_manager/`
-
-Features available to gas station managers.
-
-Examples:
-
-- Inventory monitoring
-- Incoming deliveries
-- Delivery confirmation
-- Fuel requests
-- Reports
-
----
-
-## `supplier/`
-
-Features available to fuel suppliers or administrators.
-
-Examples:
-
-- Dashboard
-- Driver management
-- Delivery scheduling
-- Fleet monitoring
-- Station management
-- Analytics
-
----
-
-## `notifications/`
-
-Centralized notification system.
-
-Examples:
-
-- Delivery assignments
-- Delivery completion
-- Fuel alerts
-- System announcements
-
----
-
-## `profile/`
-
-Contains user profile management.
-
-Examples:
-
-- Personal information
-- Edit profile
-- Change password
-
----
-
-## `settings/`
-
-Application preferences.
-
-Examples:
-
-- Theme
-- About
-- Help
-- Logout
-
----
-
-# Shared
-
-The **shared** folder contains resources used across multiple features.
-
----
-
-## `widgets/`
-
-Reusable UI components.
-
-Examples:
-
-- Delivery cards
-- Custom AppBar
-- Bottom navigation
-- Status indicators
-
----
-
-## `models/`
-
-Shared model classes referenced by multiple modules.
-
----
-
-## `providers/`
-
-Application state management.
-
-Examples:
-
-- Authentication provider
-- Theme provider
-- Delivery provider
-
----
-
-# Assets
-
-Stores all application resources.
-
-```
 assets/
+└── mock_data/
+    ├── authentication.json
+    ├── maintenance.json
+    └── vehicles.json
 ```
 
 ---
 
-## `images/`
+## Key Conventions
 
-Application images and illustrations.
+### File naming
 
----
+| Pattern | What it is | Example |
+|---------|-----------|---------|
+| `*_page.dart` | Routable screen | `map_page.dart` |
+| `*_screen.dart` | Shell with bottom nav / tabs | `driver_screen.dart` |
+| `*_service.dart` | Service class | `deliveries.dart` |
+| `*_widget.dart` | Widget directory | `role_badge.dart` |
+| `*_route.dart` | Route constants | `app_routes.dart` |
 
-## `icons/`
+### Architecture
 
-Custom icons and SVG assets.
-
----
-
-## `animations/`
-
-Lottie animations and motion assets.
-
----
-
-## `mock_data/`
-
-Additional mock datasets for prototyping.
+- **Feature-first** — each user role is a self-contained module under `features/`.
+- **Pages in `pages/`** — every routable screen goes into a `pages/` sub-directory.
+- **Widgets in `widgets/`** — feature-specific reusable widgets.
+- **Shared in `shared/`** — widgets used across multiple features.
+- **Package imports only** — all internal references use `package:project_fuel/...`.
 
 ---
 
-# Architecture
+## Routes
 
-This project follows a **Feature-First Architecture**, which organizes files by application functionality instead of file type.
-
-Benefits include:
-
-- Easier maintenance
-- Better scalability
-- Clear separation of responsibilities
-- Reusable components
-- Simplified collaboration
-
----
-
-# Technology Stack
-
-| Technology | Purpose |
-|------------|---------|
-| Flutter | Mobile UI Framework |
-| Dart | Programming Language |
-| JSON | Mock Local Database |
-| Provider / Riverpod *(optional)* | State Management |
-| Material Design 3 | UI Components |
+| Route | Screen | Role |
+|-------|--------|------|
+| `/splash` | `SplashPage` | — |
+| `/login` | `LoginPage` | — |
+| `/driver/home` | `DriverScreen` → `DriverMapPage` (tab 0) | Driver |
+| `/manager/home` | `ManagerScreen` (sidebar: Dashboard, Fuel Monitoring, Theft Detection) | Manager |
+| `/supplier/home` | `SupplierScreen` (sidebar: Dashboard, Users, Maintenance, Fleet, Theft) | Supplier |
+| `/profile` | `ProfilePage` | All |
 
 ---
 
-# User Roles
+## Tech Stack
 
-## 🚚 Tanker Truck Driver
-
-- View assigned deliveries
-- Navigate delivery routes
-- Update delivery progress
-- Receive notifications
-
----
-
-## ⛽ Gas Station Manager
-
-- Monitor fuel inventory
-- Receive fuel deliveries
-- Confirm delivery completion
-- Request fuel replenishment
+| Layer | Choice |
+|-------|--------|
+| Framework | Flutter + Dart |
+| Map | flutter_map + OpenStreetMap tiles |
+| Routing | OSRM API (router.project-osrm.org) |
+| Mock data | Local JSON files via `JsonReaderService` |
+| Navigation | Named routes + `onGenerateRoute` |
+| Nav bar | `water_drop_nav_bar` (driver) |
+| Sidebar | `sidebarx` (shared, configurable items) |
 
 ---
 
-## 🏢 Fuel Supplier
+## Mock Data
 
-- Manage fuel stations
-- Manage drivers
-- Schedule deliveries
-- Monitor fleet operations
-- View reports and analytics
+All data is read from `assets/mock_data/`:
+- `authentication.json` — user accounts with roles
+- `vehicles.json` — truck profiles with delivery stops
+- `maintenance.json` — service records
 
----
-
-# Future Improvements
-
-The current project serves as a high-fidelity prototype. Future enhancements may include:
-
-- Firebase Authentication
-- Cloud Firestore
-- REST API integration
-- GPS tracking
-- Real-time notifications
-- Offline synchronization
-- IoT sensor integration
-- QR code delivery verification
-- Analytics dashboard
-- Role-based authorization
-
----
-
-# License
-
-This project is intended for educational and prototyping purposes.
+No backend or real database is required.

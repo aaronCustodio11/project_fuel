@@ -7,55 +7,16 @@ import 'package:latlong2/latlong.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/deliveries.dart';
 import 'package:project_fuel/core/services/osrm_routing.dart';
-import 'package:project_fuel/features/driver/driver_analytics.dart';
-import 'package:project_fuel/features/driver/vehicle_maintenance.dart';
-import 'package:project_fuel/features/profile/profile_screen.dart';
-import 'package:project_fuel/shared/widgets/bottom_nav_bar.dart';
 import 'package:project_fuel/shared/widgets/role_badge.dart';
 
-class DriverDashboardPage extends StatefulWidget {
-  const DriverDashboardPage({super.key});
+class DriverMapPage extends StatefulWidget {
+  const DriverMapPage({super.key});
 
   @override
-  State<DriverDashboardPage> createState() => _DriverDashboardPageState();
+  State<DriverMapPage> createState() => _DriverMapPageState();
 }
 
-class _DriverDashboardPageState extends State<DriverDashboardPage> {
-  int _selectedIndex = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surfaceContainerLow,
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: const [
-          _DriverMapTab(),
-          VehicleMaintenancePage(),
-          DriverAnalyticsPage(),
-          ProfileScreenPage(),
-        ],
-      ),
-      bottomNavigationBar: FleetBottomNavBar(
-        selectedIndex: _selectedIndex,
-        onItemSelected: (index) {
-          setState(() => _selectedIndex = index);
-        },
-      ),
-    );
-  }
-}
-
-class _DriverMapTab extends StatefulWidget {
-  const _DriverMapTab();
-
-  @override
-  State<_DriverMapTab> createState() => _DriverMapTabState();
-}
-
-class _DriverMapTabState extends State<_DriverMapTab> {
+class _DriverMapPageState extends State<DriverMapPage> {
   final MapController _mapController = MapController();
   final AuthenticationService _authService = AuthenticationService();
   final DeliveryService _deliveryService = DeliveryService();
@@ -68,12 +29,13 @@ class _DriverMapTabState extends State<_DriverMapTab> {
   List<LatLng>? _routePoints;
   _NavigationInfo? _navigationInfo;
 
-
   bool _stopsExpanded = true;
   int _routeProgress = 0;
   Set<int> _completedStops = {};
   Timer? _simulationTimer;
   String? _notificationMessage;
+
+  bool _followDriver = true;
 
   @override
   void initState() {
@@ -88,6 +50,31 @@ class _DriverMapTabState extends State<_DriverMapTab> {
     super.dispose();
   }
 
+  List<LatLng> _orderByNearestNeighbor(LatLng start, List<LatLng> stops) {
+    if (stops.length < 2) return stops;
+
+    final ordered = <LatLng>[];
+    final remaining = stops.toList();
+    var current = start;
+
+    while (remaining.isNotEmpty) {
+      var nearestIdx = 0;
+      var nearestDist = double.infinity;
+      for (var i = 0; i < remaining.length; i++) {
+        final dist = _calculateDistanceKm(current, remaining[i]);
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestIdx = i;
+        }
+      }
+      final next = remaining.removeAt(nearestIdx);
+      ordered.add(next);
+      current = next;
+    }
+
+    return ordered;
+  }
+
   Future<void> _initAsync() async {
     final user = await _authService.getSavedUser();
 
@@ -100,16 +87,29 @@ class _DriverMapTabState extends State<_DriverMapTab> {
 
       final truck = await _deliveryService.getTruckForDriver(user.userId);
       if (truck != null && truck.deliveries.isNotEmpty) {
-        _deliveryStops = truck.deliveries
+        final rawStops = truck.deliveries
             .where((d) => d.destLatitude != 0 || d.destLongitude != 0)
-            .toList()
+            .map((d) => LatLng(d.destLatitude, d.destLongitude))
+            .toList();
+
+        final orderedPositions = _orderByNearestNeighbor(
+          _driverPosition ?? rawStops.first,
+          rawStops,
+        );
+
+        final nameMap = <LatLng, String>{};
+        for (final d in truck.deliveries) {
+          nameMap[LatLng(d.destLatitude, d.destLongitude)] = d.gasStation;
+        }
+
+        _deliveryStops = orderedPositions
             .asMap()
             .entries
             .map((e) => _DeliveryStop(
-                  position: LatLng(e.value.destLatitude, e.value.destLongitude),
-                  name: e.value.gasStation,
+                  position: e.value,
+                  name: nameMap[e.value] ?? 'Stop ${e.key + 1}',
                   stopNumber: e.key + 1,
-                  totalStops: truck.deliveries.length,
+                  totalStops: orderedPositions.length,
                 ))
             .toList();
       }
@@ -190,6 +190,7 @@ class _DriverMapTabState extends State<_DriverMapTab> {
 
     _routeProgress = 0;
     _completedStops = {};
+    _followDriver = true;
 
     const tickMs = 800;
     _simulationTimer = Timer.periodic(const Duration(milliseconds: tickMs), (_) {
@@ -211,7 +212,8 @@ class _DriverMapTabState extends State<_DriverMapTab> {
     _driverPosition = _routePoints![_routeProgress];
 
     for (var i = 0; i < _deliveryStops.length; i++) {
-      final dist = _calculateDistanceKm(_driverPosition!, _deliveryStops[i].position);
+      final dist = _calculateDistanceKm(
+          _driverPosition!, _deliveryStops[i].position);
       if (dist < 0.05 && !_completedStops.contains(i)) {
         _completedStops = {..._completedStops, i};
         _showStopNotification(_deliveryStops[i]);
@@ -238,7 +240,9 @@ class _DriverMapTabState extends State<_DriverMapTab> {
           : null,
     );
 
-    _mapController.move(_driverPosition!, 14.0);
+    if (_followDriver && _driverPosition != null) {
+      _mapController.move(_driverPosition!, _mapController.camera.zoom);
+    }
 
     if (remainingKm < 0.05 && nextStop == null) {
       _simulationTimer?.cancel();
@@ -268,6 +272,20 @@ class _DriverMapTabState extends State<_DriverMapTab> {
     });
   }
 
+  void _onMapEvent(MapEvent event) {
+    if (event is MapEventMoveEnd || event is MapEventFlingAnimationEnd) {
+      if (_followDriver) {
+        setState(() => _followDriver = false);
+      }
+    }
+  }
+
+  void _centerOnDriver() {
+    if (_driverPosition == null) return;
+    _mapController.move(_driverPosition!, _mapController.camera.zoom);
+    setState(() => _followDriver = true);
+  }
+
   double _calculateRouteDistance(List<LatLng> route) {
     double total = 0;
     for (var i = 0; i < route.length - 1; i++) {
@@ -283,7 +301,10 @@ class _DriverMapTabState extends State<_DriverMapTab> {
     final deltaLat = (b.latitude - a.latitude) * (math.pi / 180);
     final deltaLng = (b.longitude - a.longitude) * (math.pi / 180);
     final x = math.sin(deltaLat / 2) * math.sin(deltaLat / 2) +
-        math.cos(lat1) * math.cos(lat2) * math.sin(deltaLng / 2) * math.sin(deltaLng / 2);
+        math.cos(lat1) *
+            math.cos(lat2) *
+            math.sin(deltaLng / 2) *
+            math.sin(deltaLng / 2);
     return earthRadius * 2 * math.atan2(math.sqrt(x), math.sqrt(1 - x));
   }
 
@@ -333,17 +354,29 @@ class _DriverMapTabState extends State<_DriverMapTab> {
         ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
         : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-    final polylines = _routePoints != null
-        ? [
-            Polyline(
-              points: _routePoints!.sublist(_routeProgress),
-              color: theme.colorScheme.secondary,
-              strokeWidth: 5,
-              borderColor: Colors.white,
-              borderStrokeWidth: 2,
-            ),
-          ]
-        : <Polyline>[];
+    final polylines = <Polyline>[];
+
+    if (_routePoints != null && _routePoints!.isNotEmpty) {
+      polylines.add(
+        Polyline(
+          points: _routePoints!,
+          color: theme.colorScheme.outline.withValues(alpha: 0.3),
+          strokeWidth: 4,
+        ),
+      );
+    }
+
+    if (_routePoints != null && _routeProgress < _routePoints!.length) {
+      polylines.add(
+        Polyline(
+          points: _routePoints!.sublist(_routeProgress > 0 ? _routeProgress - 1 : 0),
+          color: theme.colorScheme.secondary,
+          strokeWidth: 5,
+          borderColor: Colors.white,
+          borderStrokeWidth: 2,
+        ),
+      );
+    }
 
     return Scaffold(
       body: Stack(
@@ -351,11 +384,13 @@ class _DriverMapTabState extends State<_DriverMapTab> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: _driverPosition ?? const LatLng(14.5995, 120.9842),
+              initialCenter:
+                  _driverPosition ?? const LatLng(14.5995, 120.9842),
               initialZoom: 14,
               interactionOptions: const InteractionOptions(
                 flags: InteractiveFlag.all,
               ),
+              onMapEvent: _onMapEvent,
             ),
             children: [
               TileLayer(
@@ -388,8 +423,36 @@ class _DriverMapTabState extends State<_DriverMapTab> {
               bottom: 24,
               child: _buildNavCard(theme),
             ),
+          Positioned(
+            right: 16,
+            bottom: 120,
+            child: _buildMapControls(theme),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMapControls(ThemeData theme) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FloatingActionButton.small(
+          heroTag: 'locate',
+          onPressed: _centerOnDriver,
+          backgroundColor: _followDriver
+              ? theme.colorScheme.primary
+              : theme.colorScheme.surface,
+          tooltip: 'Center on driver',
+          child: Icon(
+            Icons.my_location_rounded,
+            color: _followDriver
+                ? theme.colorScheme.onPrimary
+                : theme.colorScheme.primary,
+          ),
+        ),
+
+      ],
     );
   }
 
@@ -543,9 +606,12 @@ class _DriverMapTabState extends State<_DriverMapTab> {
             ),
             child: Center(
               child: isCompleted
-                  ? Icon(Icons.check, size: 14, color: theme.colorScheme.onPrimaryContainer)
+                  ? Icon(Icons.check,
+                      size: 14,
+                      color: theme.colorScheme.onPrimaryContainer)
                   : isCurrent
-                      ? Icon(Icons.navigation_rounded, size: 14, color: theme.colorScheme.onPrimary)
+                      ? Icon(Icons.navigation_rounded,
+                          size: 14, color: theme.colorScheme.onPrimary)
                       : Text(
                           '${stop.stopNumber}',
                           style: theme.textTheme.labelSmall?.copyWith(
@@ -560,8 +626,10 @@ class _DriverMapTabState extends State<_DriverMapTab> {
               stop.name,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
-                color: isCompleted ? theme.colorScheme.onSurfaceVariant : null,
-                decoration: isCompleted ? TextDecoration.lineThrough : null,
+                color:
+                    isCompleted ? theme.colorScheme.onSurfaceVariant : null,
+                decoration:
+                    isCompleted ? TextDecoration.lineThrough : null,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

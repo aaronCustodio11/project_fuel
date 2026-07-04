@@ -211,6 +211,27 @@ class AppTheme {
   );
 }
 
+class ThemeProvider extends InheritedNotifier<ValueNotifier<ThemeMode>> {
+  const ThemeProvider({
+    super.key,
+    required ValueNotifier<ThemeMode> notifier,
+    required super.child,
+  }) : super(notifier: notifier);
+
+  static ThemeMode read(BuildContext context) {
+    final provider = context.dependOnInheritedWidgetOfExactType<ThemeProvider>();
+    assert(provider != null, 'No ThemeProvider found in context');
+    return provider!.notifier!.value;
+  }
+
+  static void toggle(BuildContext context) {
+    final provider = context.dependOnInheritedWidgetOfExactType<ThemeProvider>();
+    assert(provider != null, 'No ThemeProvider found in context');
+    final notifier = provider!.notifier!;
+    notifier.value = notifier.value == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+  }
+}
+
 class FleetStatusColors extends ThemeExtension<FleetStatusColors> {
   const FleetStatusColors({
     required this.moving,

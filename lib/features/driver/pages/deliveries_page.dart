@@ -3,14 +3,14 @@ import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/deliveries.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 
-class DriverAnalyticsPage extends StatefulWidget {
-  const DriverAnalyticsPage({super.key});
+class DriverDeliveriesPage extends StatefulWidget {
+  const DriverDeliveriesPage({super.key});
 
   @override
-  State<DriverAnalyticsPage> createState() => _DriverAnalyticsPageState();
+  State<DriverDeliveriesPage> createState() => _DriverDeliveriesPageState();
 }
 
-class _DriverAnalyticsPageState extends State<DriverAnalyticsPage> {
+class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
   final AuthenticationService _authService = AuthenticationService();
   final DeliveryService _deliveryService = DeliveryService();
 
@@ -35,17 +35,27 @@ class _DriverAnalyticsPageState extends State<DriverAnalyticsPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surfaceContainerLow,
-      appBar: AppBar(
-        title: const Text('Analytics'),
-        centerTitle: true,
-        automaticallyImplyLeading: false,
+      backgroundColor: scheme.surfaceContainerLow,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(FleetSpacing.xl, FleetSpacing.xl, FleetSpacing.xl, 0),
+              child: Text('Deliveries', style: theme.textTheme.headlineLarge),
+            ),
+            const SizedBox(height: FleetSpacing.md),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildContent(theme),
+            ),
+          ],
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _buildContent(theme),
     );
   }
 

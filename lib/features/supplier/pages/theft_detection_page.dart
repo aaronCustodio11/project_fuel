@@ -1,7 +1,6 @@
 import 'package:chartify/chartify.dart';
 import 'package:flutter/material.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
-import 'package:project_fuel/shared/widgets/sidebar.dart';
 
 enum TheftAlertType { fuelTheft, unauthorizedAccess, gpsTampering, routeDeviation }
 
@@ -157,14 +156,7 @@ class _SupplierTheftDetectionState extends State<SupplierTheftDetection> {
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLow,
       body: SafeArea(
-        child: RepaintBoundary(
-          child: Row(
-            children: [
-              const Sidebar(initialIndex: 4),
-              Expanded(child: _buildContent(context)),
-            ],
-          ),
-        ),
+        child: _buildContent(context),
       ),
     );
   }
