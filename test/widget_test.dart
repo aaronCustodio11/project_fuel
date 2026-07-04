@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:project_fuel/features/user_dashboard.dart';
+import 'package:project_fuel/features/supplier/user_dashboard.dart';
 
 void main() {
   testWidgets('shows the user dashboard content', (tester) async {

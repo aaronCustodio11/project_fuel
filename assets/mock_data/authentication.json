@@ -7,32 +7,166 @@
     "extensionName": "",
     "company": "FleetSense Logistics",
     "role": "Driver",
+    "supplierId": 9,
     "email": "juan.delacruz@fleetsense.ph",
     "password": "Passw0rd!",
-    "plateNumber": "ABC 1234"
+    "plateNumber": "ABC 1234",
+    "location": {
+      "latitude": 13.7565,
+      "longitude": 121.0583
+    }
   },
   {
     "userId": 2,
+    "firstName": "Mark",
+    "middleName": "Garcia",
+    "surName": "Torres",
+    "extensionName": "",
+    "company": "FleetSense Logistics",
+    "role": "Driver",
+    "supplierId": 9,
+    "email": "mark.torres@fleetsense.ph",
+    "password": "Passw0rd!",
+    "plateNumber": "DEF 5678",
+    "location": {
+      "latitude": 13.7592,
+      "longitude": 121.0634
+    }
+  },
+  {
+    "userId": 3,
     "firstName": "Maria",
     "middleName": "",
     "surName": "Reyes",
     "extensionName": "",
     "company": "FleetSense Logistics",
     "role": "Manager",
+    "supplierId": 9,
     "email": "maria.reyes@fleetsense.ph",
     "password": "Passw0rd!",
-    "plateNumber": ""
+    "plateNumber": "",
+    "location": {
+      "latitude": 13.7548,
+      "longitude": 121.0601
+    }
   },
   {
-    "userId": 3,
+    "userId": 4,
+    "firstName": "Angela",
+    "middleName": "",
+    "surName": "Lopez",
+    "extensionName": "",
+    "company": "FleetSense Logistics",
+    "role": "Manager",
+    "supplierId": 9,
+    "email": "angela.lopez@fleetsense.ph",
+    "password": "Passw0rd!",
+    "plateNumber": "",
+    "location": {
+      "latitude": 13.7580,
+      "longitude": 121.0568
+    }
+  },
+  {
+    "userId": 5,
+    "firstName": "Ramon",
+    "middleName": "",
+    "surName": "Castillo",
+    "extensionName": "",
+    "company": "FleetSense Transport",
+    "role": "Driver",
+    "supplierId": 10,
+    "email": "ramon.castillo@fleetsense.ph",
+    "password": "Passw0rd!",
+    "plateNumber": "GHI 9012",
+    "location": {
+      "latitude": 13.7925,
+      "longitude": 121.0721
+    }
+  },
+  {
+    "userId": 6,
+    "firstName": "Leo",
+    "middleName": "",
+    "surName": "Fernandez",
+    "extensionName": "",
+    "company": "FleetSense Transport",
+    "role": "Driver",
+    "supplierId": 10,
+    "email": "leo.fernandez@fleetsense.ph",
+    "password": "Passw0rd!",
+    "plateNumber": "JKL 3456",
+    "location": {
+      "latitude": 13.7898,
+      "longitude": 121.0692
+    }
+  },
+  {
+    "userId": 7,
+    "firstName": "Patricia",
+    "middleName": "",
+    "surName": "Mendoza",
+    "extensionName": "",
+    "company": "FleetSense Transport",
+    "role": "Manager",
+    "supplierId": 10,
+    "email": "patricia.mendoza@fleetsense.ph",
+    "password": "Passw0rd!",
+    "plateNumber": "",
+    "location": {
+      "latitude": 13.7907,
+      "longitude": 121.0708
+    }
+  },
+  {
+    "userId": 8,
+    "firstName": "Kevin",
+    "middleName": "R.",
+    "surName": "Flores",
+    "extensionName": "",
+    "company": "FleetSense Transport",
+    "role": "Manager",
+    "supplierId": 10,
+    "email": "kevin.flores@fleetsense.ph",
+    "password": "Passw0rd!",
+    "plateNumber": "",
+    "location": {
+      "latitude": 13.7931,
+      "longitude": 121.0675
+    }
+  },
+  {
+    "userId": 9,
     "firstName": "Carlos",
     "middleName": "",
     "surName": "Villanueva",
     "extensionName": "Jr.",
     "company": "FleetSense HQ",
     "role": "Supplier",
+    "supplierId": null,
     "email": "carlos.villanueva@fleetsense.ph",
     "password": "Passw0rd!",
-    "plateNumber": ""
+    "plateNumber": "",
+    "location": {
+      "latitude": 13.7578,
+      "longitude": 121.0615
+    }
+  },
+  {
+    "userId": 10,
+    "firstName": "Sophia",
+    "middleName": "",
+    "surName": "Navarro",
+    "extensionName": "",
+    "company": "FleetSense Distribution",
+    "role": "Supplier",
+    "supplierId": null,
+    "email": "sophia.navarro@fleetsense.ph",
+    "password": "Passw0rd!",
+    "plateNumber": "",
+    "location": {
+      "latitude": 13.7910,
+      "longitude": 121.0712
+    }
   }
 ]

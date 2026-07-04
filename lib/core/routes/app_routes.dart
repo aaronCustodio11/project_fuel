@@ -14,10 +14,11 @@ class AppRoutes {
 
   // Supplier
   static const supplierHome = '/supplier/home';
+  static const userDashboard = '/supplier/user_dashboard';
+
 
   // Shared
   static const profile = '/profile';
   static const settings = '/settings';
 
-  static const userDashboard = '/user_dashboard';
 }

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:project_fuel/features/authentication/login_screen.dart';
 import 'package:project_fuel/features/authentication/splash_screen.dart';
 import 'package:project_fuel/features/driver/driver_dashboard.dart';
-import 'package:project_fuel/features/user_dashboard.dart';
+import 'package:project_fuel/features/profile/profile_screen.dart';
+import 'package:project_fuel/features/supplier/user_dashboard.dart';
 
 import 'app_routes.dart';
 
@@ -42,7 +43,7 @@ class RouteGenerator {
         );
 
       case AppRoutes.profile:
-        return _buildRoute(settings, const PlaceholderPage(title: 'Profile'));
+        return _buildRoute(settings, const ProfileScreenPage());
 
       case AppRoutes.settings:
         return _buildRoute(settings, const PlaceholderPage(title: 'Settings'));
@@ -65,7 +66,7 @@ class PlaceholderPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: AppBar(title: Text(title), automaticallyImplyLeading: false,),
       body: Center(child: Text(title, style: const TextStyle(fontSize: 24))),
     );
   }

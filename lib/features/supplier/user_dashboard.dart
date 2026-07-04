@@ -1,7 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:project_fuel/shared/widgets/sidebar.dart';
+
+String? _coerceStringValue(Object? value) {
+  if (value == null) return null;
+  if (value is String) return value;
+  if (value is Map) {
+    final latitude = value['latitude'];
+    final longitude = value['longitude'];
+    if (latitude != null && longitude != null) {
+      return '$latitude, $longitude';
+    }
+    return value.toString();
+  }
+  return value.toString();
+}
 
 /// Dashboard-scoped user model.
 /// NOTE: AuthUser (auth model) doesn't carry middleName, extensionName,
@@ -58,8 +73,8 @@ class ManagedUser {
       email: json['email'] as String? ?? '',
       password: json['password'] as String? ?? '',
       plateNumber: json['plateNumber'] as String?,
-      assignedSupplierId: json['assignedSupplierId'] as String?,
-      location: json['location'] as String?,
+      assignedSupplierId: (json['assignedSupplierId'] ?? json['supplierId'])?.toString(),
+      location: _coerceStringValue(json['location']),
     );
   }
 
@@ -92,6 +107,25 @@ class ManagedUser {
       location: location ?? this.location,
     );
   }
+}
+
+List<ManagedUser> filterUsersForCurrentSupplier(
+  List<ManagedUser> users, {
+  required String? currentSupplierId,
+  required String? currentRole,
+}) {
+  if (currentRole?.toLowerCase() != 'supplier' ||
+      currentSupplierId == null ||
+      currentSupplierId.trim().isEmpty) {
+    return users;
+  }
+
+  final supplierId = currentSupplierId.trim();
+  return users.where((user) {
+    final isAssignedToSupplier = user.assignedSupplierId?.trim() == supplierId;
+    final isCurrentSupplierAccount = user.userId.trim() == supplierId;
+    return isAssignedToSupplier && !isCurrentSupplierAccount;
+  }).toList();
 }
 
 class UserDashboard extends StatefulWidget {
@@ -144,8 +178,15 @@ class _UserDashboardState extends State<UserDashboard> {
           .whereType<Map<String, dynamic>>()
           .map(ManagedUser.fromJson)
           .toList();
+      final currentUser = await AuthenticationService().getSavedUser();
+      final visibleUsers = filterUsersForCurrentSupplier(
+        users,
+        currentSupplierId: currentUser?.userId.toString(),
+        currentRole: currentUser?.role,
+      );
+
       setState(() {
-        _users = users;
+        _users = visibleUsers;
         _isLoading = false;
       });
     } catch (e) {

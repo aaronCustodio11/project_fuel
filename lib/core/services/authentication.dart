@@ -9,6 +9,9 @@ class AuthUser {
     required this.email,
     required this.role,
     required this.company,
+    this.supplierId,
+    this.latitude,  // Added
+    this.longitude, // Added
   });
 
   final int userId;
@@ -17,6 +20,9 @@ class AuthUser {
   final String email;
   final String role;
   final String company;
+  final int? supplierId;
+  final double? latitude;  // Added
+  final double? longitude; // Added
 
   String get fullName => '$firstName $surName'.trim();
 }
@@ -42,13 +48,20 @@ class AuthenticationService {
 
       if (normalizedEmail == email.trim().toLowerCase() &&
           normalizedPassword == password) {
+        
+        // Extract nested location safely
+        final location = item['location'] as Map<String, dynamic>?;
+        
         final authUser = AuthUser(
-          userId: item['userId'] as int,
+          userId: _parseInt(item['userId']) ?? 0,
           firstName: item['firstName'] as String? ?? '',
           surName: item['surName'] as String? ?? '',
-          email: normalizedEmail,
+          email: item['email'] as String? ?? normalizedEmail, // Retain original casing if preferred
           role: (item['role'] as String? ?? '').trim(),
           company: item['company'] as String? ?? '',
+          supplierId: _parseInt(item['supplierId'] ?? item['assignedSupplierId']),
+          latitude: _parseDouble(location?['latitude']),   // Mapped
+          longitude: _parseDouble(location?['longitude']), // Mapped
         );
 
         await persistUser(authUser);
@@ -82,13 +95,20 @@ class AuthenticationService {
 
       final normalizedEmail = (item['email'] as String? ?? '').trim().toLowerCase();
       if (normalizedEmail == savedEmail.toLowerCase()) {
+        
+        // Extract nested location safely
+        final location = item['location'] as Map<String, dynamic>?;
+
         return AuthUser(
-          userId: item['userId'] as int,
+          userId: _parseInt(item['userId']) ?? 0,
           firstName: item['firstName'] as String? ?? '',
           surName: item['surName'] as String? ?? '',
-          email: normalizedEmail,
+          email: item['email'] as String? ?? normalizedEmail,
           role: (item['role'] as String? ?? '').trim(),
           company: item['company'] as String? ?? '',
+          supplierId: _parseInt(item['supplierId'] ?? item['assignedSupplierId']),
+          latitude: _parseDouble(location?['latitude']),   // Mapped
+          longitude: _parseDouble(location?['longitude']), // Mapped
         );
       }
     }
@@ -99,6 +119,21 @@ class AuthenticationService {
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_storageKey);
+  }
+
+  static int? _parseInt(Object? value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    return int.tryParse(value.toString());
+  }
+
+  // Added helper parser for doubles to prevent structural runtime dynamic crash issues
+  static double? _parseDouble(Object? value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    return double.tryParse(value.toString());
   }
 
   String getRouteForRole(String role) {
