@@ -1,3 +1,38 @@
-{
-    
-}
+[
+  {
+    "userId": 1,
+    "firstName": "Juan",
+    "middleName": "Santos",
+    "surName": "Dela Cruz",
+    "extensionName": "",
+    "company": "FleetSense Logistics",
+    "role": "Driver",
+    "email": "juan.delacruz@fleetsense.ph",
+    "password": "Passw0rd!",
+    "plateNumber": "ABC 1234"
+  },
+  {
+    "userId": 2,
+    "firstName": "Maria",
+    "middleName": "",
+    "surName": "Reyes",
+    "extensionName": "",
+    "company": "FleetSense Logistics",
+    "role": "Manager",
+    "email": "maria.reyes@fleetsense.ph",
+    "password": "Passw0rd!",
+    "plateNumber": ""
+  },
+  {
+    "userId": 3,
+    "firstName": "Carlos",
+    "middleName": "",
+    "surName": "Villanueva",
+    "extensionName": "Jr.",
+    "company": "FleetSense HQ",
+    "role": "Supplier",
+    "email": "carlos.villanueva@fleetsense.ph",
+    "password": "Passw0rd!",
+    "plateNumber": ""
+  }
+]
