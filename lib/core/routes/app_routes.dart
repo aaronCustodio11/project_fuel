@@ -1,5 +1,3 @@
-import 'package:project_fuel/features/user_dashboard.dart';
-
 class AppRoutes {
   AppRoutes._();
 

@@ -19,7 +19,7 @@ class ProjectFuelApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-      initialRoute: AppRoutes.userDashboard,
+      initialRoute: AppRoutes.splash,
       onGenerateRoute: RouteGenerator.generateRoute,
     );
   }
