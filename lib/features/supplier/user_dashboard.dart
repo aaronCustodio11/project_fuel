@@ -265,11 +265,13 @@ class _UserDashboardState extends State<UserDashboard> {
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLow,
       body: SafeArea(
-        child: Row(
-          children: [
-            const Sidebar(),
-            Expanded(child: _buildDashboardContent(context)),
-          ],
+        child: RepaintBoundary(
+          child: Row(
+            children: [
+              const Sidebar(initialIndex: 1),
+              Expanded(child: _buildDashboardContent(context)),
+            ],
+          ),
         ),
       ),
     );
@@ -652,7 +654,7 @@ class _UserFormDialogState extends State<_UserFormDialog> {
     super.dispose();
   }
 
-  void _handleSubmit() {
+  void _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
     final user = ManagedUser(
@@ -674,8 +676,57 @@ class _UserFormDialogState extends State<_UserFormDialog> {
       location: _selectedRole == 'Manager' ? _locationCtrl.text.trim() : null,
     );
 
+    final action = _isEditing ? 'Update' : 'Add';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(FleetRadius.md),
+        ),
+        title: Text('Confirm $action'),
+        content: Text(
+          _isEditing
+              ? 'Update ${user.fullName}?'
+              : 'Add ${user.fullName} as ${user.role}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: Text(_isEditing ? 'Save' : 'Add'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
     widget.onSubmit(user);
     Navigator.of(context).pop();
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (c) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(FleetRadius.md),
+        ),
+        title: const Text('Success'),
+        content: Text(
+          _isEditing
+              ? '${user.fullName} has been updated.'
+              : '${user.fullName} has been added as ${user.role}.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(c),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

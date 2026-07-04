@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:project_fuel/features/authentication/login_screen.dart';
 import 'package:project_fuel/features/authentication/splash_screen.dart';
 import 'package:project_fuel/features/driver/driver_dashboard.dart';
-import 'package:project_fuel/features/user_dashboard.dart';
+import 'package:project_fuel/features/supplier/user_dashboard.dart';
+import 'package:project_fuel/features/supplier/supplier_dashboard.dart';
+import 'package:project_fuel/features/supplier/supplier_fleet_tracking.dart';
+import 'package:project_fuel/features/supplier/supplier_maintenance.dart';
+import 'package:project_fuel/features/supplier/supplier_theft_detection.dart';
 
 import 'app_routes.dart';
 
@@ -30,16 +34,19 @@ class RouteGenerator {
         );
 
       case AppRoutes.supplierHome:
-        return _buildRoute(
-          settings,
-          const PlaceholderPage(title: 'Supplier Dashboard'),
-        );
+        return _buildRoute(settings, const SupplierDashboard());
 
       case AppRoutes.userDashboard:
-        return _buildRoute(
-          settings,
-          const UserDashboard(),
-        );
+        return _buildRoute(settings, const UserDashboard());
+
+      case AppRoutes.supplierMaintenance:
+        return _buildRoute(settings, const SupplierMaintenance());
+
+      case AppRoutes.supplierFleetTracking:
+        return _buildRoute(settings, const SupplierFleetTracking());
+
+      case AppRoutes.supplierTheftDetection:
+        return _buildRoute(settings, const SupplierTheftDetection());
 
       case AppRoutes.profile:
         return _buildRoute(settings, const PlaceholderPage(title: 'Profile'));
@@ -52,8 +59,13 @@ class RouteGenerator {
     }
   }
 
-  static MaterialPageRoute _buildRoute(RouteSettings settings, Widget page) {
-    return MaterialPageRoute(settings: settings, builder: (_) => page);
+  static Route<dynamic> _buildRoute(RouteSettings settings, Widget page) {
+    return PageRouteBuilder(
+      settings: settings,
+      pageBuilder: (_, _, _) => page,
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+    );
   }
 }
 
