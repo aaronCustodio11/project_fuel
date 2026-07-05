@@ -388,7 +388,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
             options: MapOptions(
               initialCenter:
                   _driverPosition ?? const LatLng(13.76, 121.06),
-              initialZoom: 14,
+              initialZoom: 16,
               interactionOptions: const InteractionOptions(
                 flags: InteractiveFlag.all,
               ),

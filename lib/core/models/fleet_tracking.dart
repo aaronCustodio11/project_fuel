@@ -11,6 +11,7 @@ class FleetTruck {
   final LatLng position;
   final TruckStatus status;
   final int? driverId;
+  final int? supplierId;
   final double? speed;
   final double? fuelLevel;
   final String? lastUpdate;
@@ -22,6 +23,7 @@ class FleetTruck {
     required this.position,
     required this.status,
     this.driverId,
+    this.supplierId,
     this.speed,
     this.fuelLevel,
     this.lastUpdate,
@@ -46,6 +48,7 @@ class FleetTruck {
       ),
       status: status,
       driverId: json['driverId'] as int?,
+      supplierId: json['supplierId'] as int?,
       speed: (json['speedKph'] as num?)?.toDouble(),
       fuelLevel: (json['fuelLevel'] as num?)?.toDouble(),
       lastUpdate: null,
