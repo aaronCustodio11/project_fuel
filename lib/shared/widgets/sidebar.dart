@@ -168,34 +168,46 @@ class _SidebarState extends State<Sidebar> {
         (themeMode == ThemeMode.system && _lastBrightness == Brightness.light);
     final themeIcon = isLight ? Icons.dark_mode_outlined : Icons.light_mode_outlined;
     final themeLabel = isLight ? 'Dark' : 'Light';
+    final scheme = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: EdgeInsets.all(extended ? FleetSpacing.md : FleetSpacing.sm),
+      padding: EdgeInsets.fromLTRB(
+        FleetSpacing.sm,
+        0,
+        FleetSpacing.sm,
+        extended ? FleetSpacing.md : FleetSpacing.sm,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          InkWell(
-            onTap: () => ThemeProvider.toggle(context),
-            borderRadius: BorderRadius.circular(FleetRadius.sm),
-            child: extended
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(themeIcon, color: fg.withValues(alpha: 0.7), size: 18),
-                      const SizedBox(width: FleetSpacing.sm),
-                      Flexible(
-                        child: Text(
-                          themeLabel,
-                          style: TextStyle(color: fg.withValues(alpha: 0.7), fontSize: 13),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  )
-                : Icon(themeIcon, color: fg.withValues(alpha: 0.7), size: 18),
-          ),
+          Divider(height: 1, color: scheme.outlineVariant),
           SizedBox(height: extended ? FleetSpacing.sm : FleetSpacing.xs),
-          InkWell(
+
+          _FooterButton(
+            extended: extended,
+            icon: themeIcon,
+            label: themeLabel,
+            onTap: () => ThemeProvider.toggle(context),
+            extendedBuilder: () => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(themeIcon, color: fg, size: 16),
+                const SizedBox(width: FleetSpacing.sm),
+                Text(
+                  themeLabel,
+                  style: TextStyle(color: fg, fontSize: 13, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+            collapsedBuilder: () => Icon(themeIcon, color: fg, size: 18),
+          ),
+
+          SizedBox(height: extended ? FleetSpacing.xs : 2),
+
+          _FooterButton(
+            extended: extended,
+            icon: Icons.logout,
+            label: 'Logout',
             onTap: () async {
               final confirmed = await showLogoutConfirmationDialog(context);
               if (confirmed && context.mounted) {
@@ -205,26 +217,87 @@ class _SidebarState extends State<Sidebar> {
                 }
               }
             },
-            borderRadius: BorderRadius.circular(FleetRadius.sm),
-            child: extended
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.logout, color: fg.withValues(alpha: 0.7), size: 18),
-                      const SizedBox(width: FleetSpacing.sm),
-                      Flexible(
-                        child: Text(
-                          'Logout',
-                          style: TextStyle(color: fg.withValues(alpha: 0.7), fontSize: 13),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  )
-                : Icon(Icons.logout, color: fg.withValues(alpha: 0.7), size: 18),
+            isDestructive: true,
+            extendedBuilder: () => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.logout, color: AppTheme.dangerRed, size: 16),
+                const SizedBox(width: FleetSpacing.sm),
+                Text(
+                  'Logout',
+                  style: TextStyle(
+                    color: AppTheme.dangerRed,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            collapsedBuilder: () => Icon(Icons.logout, color: AppTheme.dangerRed, size: 18),
           ),
         ],
       ),
     );
   }
 }
+
+class _FooterButton extends StatefulWidget {
+  final bool extended;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Widget Function() extendedBuilder;
+  final Widget Function() collapsedBuilder;
+  final bool isDestructive;
+
+  const _FooterButton({
+    required this.extended,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.extendedBuilder,
+    required this.collapsedBuilder,
+    this.isDestructive = false,
+  });
+
+  @override
+  State<_FooterButton> createState() => _FooterButtonState();
+}
+
+class _FooterButtonState extends State<_FooterButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final bg = widget.isDestructive
+        ? AppTheme.dangerRed.withValues(alpha: _isHovered ? 0.12 : 0.0)
+        : scheme.surfaceContainerHighest.withValues(alpha: _isHovered ? 0.5 : 0.0);
+
+    return Tooltip(
+      message: widget.label,
+      waitDuration: const Duration(milliseconds: 300),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(FleetRadius.sm),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: EdgeInsets.symmetric(
+              horizontal: widget.extended ? FleetSpacing.md : FleetSpacing.sm,
+              vertical: FleetSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(FleetRadius.sm),
+            ),
+            child: widget.extended ? widget.extendedBuilder() : widget.collapsedBuilder(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+

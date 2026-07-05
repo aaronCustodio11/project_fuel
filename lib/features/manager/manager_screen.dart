@@ -3,6 +3,7 @@ import 'package:project_fuel/features/manager/pages/dashboard_page.dart';
 import 'package:project_fuel/features/manager/pages/fuel_monitoring_page.dart';
 import 'package:project_fuel/features/manager/pages/theft_detection_page.dart';
 import 'package:project_fuel/shared/widgets/sidebar.dart';
+import 'package:project_fuel/shared/widgets/introductory.dart';
 import 'package:sidebarx/sidebarx.dart';
 
 class ManagerScreen extends StatefulWidget {
@@ -20,6 +21,14 @@ class _ManagerScreenState extends State<ManagerScreen> {
     ManagerFuelMonitoring(),
     ManagerTheftDetection(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showIntroductoryOverlay(context, role: IntroductoryRole.manager);
+    });
+  }
 
   static const _sidebarItems = [
     SidebarXItem(icon: Icons.dashboard_outlined, label: 'Dashboard'),
