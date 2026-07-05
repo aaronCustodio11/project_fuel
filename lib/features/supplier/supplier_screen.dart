@@ -17,13 +17,15 @@ class SupplierScreen extends StatefulWidget {
 class _SupplierScreenState extends State<SupplierScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = const [
-    SupplierDashboard(),
-    UserDashboard(),
-    SupplierMaintenance(),
-    SupplierFleetTracking(),
-    SupplierTheftDetection(),
+  late final List<Widget> _pages = [
+    SupplierDashboard(onNavigate: _onNavigate),
+    const UserDashboard(),
+    const SupplierMaintenance(),
+    const SupplierFleetTracking(),
+    const SupplierTheftDetection(),
   ];
+
+  void _onNavigate(int index) => setState(() => _selectedIndex = index);
 
   static const _sidebarItems = [
     SidebarXItem(icon: Icons.dashboard_outlined, label: 'Dashboard'),

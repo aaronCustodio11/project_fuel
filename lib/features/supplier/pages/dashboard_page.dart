@@ -4,7 +4,8 @@ import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 
 class SupplierDashboard extends StatefulWidget {
-  const SupplierDashboard({super.key});
+  final void Function(int index)? onNavigate;
+  const SupplierDashboard({super.key, this.onNavigate});
 
   @override
   State<SupplierDashboard> createState() => _SupplierDashboardState();
@@ -26,41 +27,28 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
   }
 
   void _showPeriodPicker() {
-    showModalBottomSheet(
+    final periods = ['Q1 2026', 'Q2 2026', 'Q3 2026', 'Q4 2026', '2025', '2024'];
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(FleetRadius.lg)),
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(FleetRadius.md),
+        ),
+        title: const Text('Select Period'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: periods.map((p) => ListTile(
+            title: Text(p),
+            trailing: p == _selectedPeriod
+                ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                : null,
+            onTap: () {
+              setState(() => _selectedPeriod = p);
+              Navigator.pop(dialogContext);
+            },
+          )).toList(),
+        ),
       ),
-      builder: (context) {
-        final periods = ['Q1 2026', 'Q2 2026', 'Q3 2026', 'Q4 2026', '2025', '2024'];
-        return Padding(
-          padding: const EdgeInsets.all(FleetSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: FleetSpacing.lg),
-              Text('Select Period', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: FleetSpacing.md),
-              ...periods.map((p) => ListTile(
-                title: Text(p),
-                trailing: p == _selectedPeriod ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
-                onTap: () {
-                  setState(() => _selectedPeriod = p);
-                  Navigator.pop(context);
-                },
-              )),
-              const SizedBox(height: FleetSpacing.sm),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -530,7 +518,7 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: () {},
+                    onPressed: () => widget.onNavigate?.call(4),
                     child: const Text('View All Alerts'),
                   ),
                 ),
@@ -591,7 +579,7 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: () {},
+                    onPressed: () => widget.onNavigate?.call(2),
                     child: const Text('Manage Maintenance'),
                   ),
                 ),

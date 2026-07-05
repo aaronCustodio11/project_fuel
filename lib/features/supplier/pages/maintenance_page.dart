@@ -464,27 +464,36 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
             title: 'Cost by Type',
             subtitle: 'Total spending per maintenance category',
             child: RepaintBoundary(
-              child: BarChart(
-                data: BarChartData(
-                  series: [
-                    BarSeries.fromValues<double>(
-                      name: 'Cost',
-                      values: typeValues,
-                      color: AppTheme.successGreen,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF059669), Color(0xFF34D399)],
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                      ),
-                    ),
-                  ],
-                  xAxis: BarXAxisConfig(categories: typeLabels),
-                  yAxis: const BarYAxisConfig(min: 0),
-                  grouping: BarGrouping.grouped,
-                  direction: BarDirection.vertical,
+              child: ChartTheme(
+                data: ChartTheme.of(context).copyWith(
+                  labelStyle: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
-                tooltip: const TooltipConfig(enabled: true),
-                animation: const ChartAnimation.none(),
+                child: BarChart(
+                  data: BarChartData(
+                    series: [
+                      BarSeries.fromValues<double>(
+                        name: 'Cost',
+                        values: typeValues,
+                        color: AppTheme.successGreen,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF059669), Color(0xFF34D399)],
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                        ),
+                      ),
+                    ],
+                    xAxis: BarXAxisConfig(categories: typeLabels),
+                    yAxis: const BarYAxisConfig(min: 0, tickCount: 4),
+                    grouping: BarGrouping.grouped,
+                    direction: BarDirection.vertical,
+                  ),
+                  tooltip: const TooltipConfig(enabled: true),
+                  animation: const ChartAnimation.none(),
+                ),
               ),
             ),
           ),
@@ -509,27 +518,36 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
             title: 'Requests by Type',
             subtitle: '${_records.length} total requests',
             child: RepaintBoundary(
-              child: BarChart(
-                data: BarChartData(
-                  series: [
-                    BarSeries.fromValues<double>(
-                      name: 'Requests',
-                      values: typeValues,
-                      color: const Color(0xFF6366F1),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                      ),
-                    ),
-                  ],
-                  xAxis: BarXAxisConfig(categories: typeLabels),
-                  yAxis: const BarYAxisConfig(min: 0),
-                  grouping: BarGrouping.grouped,
-                  direction: BarDirection.vertical,
+              child: ChartTheme(
+                data: ChartTheme.of(context).copyWith(
+                  labelStyle: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
-                tooltip: const TooltipConfig(enabled: true),
-                animation: const ChartAnimation.none(),
+                child: BarChart(
+                  data: BarChartData(
+                    series: [
+                      BarSeries.fromValues<double>(
+                        name: 'Requests',
+                        values: typeValues,
+                        color: const Color(0xFF6366F1),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                        ),
+                      ),
+                    ],
+                    xAxis: BarXAxisConfig(categories: typeLabels),
+                    yAxis: const BarYAxisConfig(min: 0, tickCount: 4),
+                    grouping: BarGrouping.grouped,
+                    direction: BarDirection.vertical,
+                  ),
+                  tooltip: const TooltipConfig(enabled: true),
+                  animation: const ChartAnimation.none(),
+                ),
               ),
             ),
           ),

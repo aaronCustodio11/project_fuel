@@ -34,6 +34,14 @@ class _SidebarState extends State<Sidebar> {
   }
 
   @override
+  void didUpdateWidget(Sidebar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialIndex != oldWidget.initialIndex) {
+      _controller.selectIndex(widget.initialIndex);
+    }
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final brightness = Theme.of(context).colorScheme.brightness;

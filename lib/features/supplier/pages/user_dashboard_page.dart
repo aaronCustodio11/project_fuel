@@ -1,3 +1,4 @@
+import 'package:chartify/chartify.dart';
 import 'package:flutter/material.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
@@ -310,35 +311,41 @@ class _UserDashboardState extends State<UserDashboard> {
   Widget _buildDashboardContent(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(FleetSpacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'User Management',
-                style: Theme.of(context).textTheme.headlineLarge,
-              ),
-              FilledButton.icon(
-                onPressed: _openAddDialog,
-                icon: const Icon(Icons.person_add_alt_1, size: 18),
-                label: const Text('Add User'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'User Management',
+                  style: Theme.of(context).textTheme.headlineLarge,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: FleetSpacing.xl),
-          if (!_isLoading && _errorMessage == null) _buildAnalytics(context),
-          if (!_isLoading && _errorMessage == null)
+                FilledButton.icon(
+                  onPressed: _openAddDialog,
+                  icon: const Icon(Icons.person_add_alt_1, size: 18),
+                  label: const Text('Add User'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: FleetSpacing.xl),
-          if (!_isLoading && _errorMessage == null) _buildToolbar(context),
-          if (!_isLoading && _errorMessage == null)
-            const SizedBox(height: FleetSpacing.lg),
-          Expanded(child: _buildBody(context)),
-        ],
+            if (!_isLoading && _errorMessage == null) _buildAnalytics(context),
+            if (!_isLoading && _errorMessage == null)
+              const SizedBox(height: FleetSpacing.xl),
+            if (!_isLoading && _errorMessage == null) _buildChartRow(context),
+            if (!_isLoading && _errorMessage == null)
+              const SizedBox(height: FleetSpacing.xl),
+            if (!_isLoading && _errorMessage == null) _buildToolbar(context),
+            if (!_isLoading && _errorMessage == null)
+              const SizedBox(height: FleetSpacing.lg),
+            _buildBody(context),
+            const SizedBox(height: FleetSpacing.xl),
+          ],
+        ),
       ),
     );
   }
@@ -384,6 +391,106 @@ class _UserDashboardState extends State<UserDashboard> {
           ),
         ),
       ],
+    );
+  }
+
+  Map<String, int> _usersByCompany() {
+    final map = <String, int>{};
+    for (final u in _users) {
+      map[u.company] = (map[u.company] ?? 0) + 1;
+    }
+    final sorted = map.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return Map.fromEntries(sorted.take(6));
+  }
+
+  Widget _buildChartRow(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final managers = _countByRole('Manager').toDouble();
+    final drivers = _countByRole('Driver').toDouble();
+    final suppliers = _countByRole('Supplier').toDouble();
+    final total = managers + drivers + suppliers;
+
+    final companyData = _usersByCompany();
+
+    return SizedBox(
+      height: 280,
+      child: Row(
+        children: [
+          Expanded(
+            child: _ChartCard(
+              title: 'Users by Role',
+              subtitle: '$total total users',
+              child: PieChart(
+                data: PieChartData(
+                  sections: [
+                    if (managers > 0)
+                      PieSection(
+                        value: managers,
+                        label: 'Managers',
+                        color: AppTheme.accentBlue,
+                      ),
+                    if (drivers > 0)
+                      PieSection(
+                        value: drivers,
+                        label: 'Drivers',
+                        color: AppTheme.warningAmber,
+                      ),
+                    if (suppliers > 0)
+                      PieSection(
+                        value: suppliers,
+                        label: 'Suppliers',
+                        color: AppTheme.brandGreenDark,
+                      ),
+                  ],
+                  segmentGap: 2,
+                  cornerRadius: 4,
+                  showLabels: true,
+                  labelPosition: PieLabelPosition.outside,
+                  labelConnector: PieLabelConnector.elbow,
+                ),
+                tooltip: const TooltipConfig(enabled: true),
+                animation: const ChartAnimation.none(),
+              ),
+            ),
+          ),
+          const SizedBox(width: FleetSpacing.md),
+          Expanded(
+            child: _ChartCard(
+              title: 'Users by Company',
+              subtitle: '${companyData.length} companies',
+                child: ChartTheme(
+                data: ChartTheme.of(context).copyWith(
+                  labelStyle: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                child: BarChart(
+                  data: BarChartData(
+                    series: [
+                      BarSeries.fromValues<double>(
+                        name: 'Users',
+                        values: companyData.values.map((e) => e.toDouble()).toList(),
+                        color: scheme.primary,
+                      ),
+                    ],
+                    xAxis: BarXAxisConfig(
+                      categories: companyData.keys.toList(),
+                    ),
+                    yAxis: const BarYAxisConfig(min: 0, tickCount: 4),
+                    grouping: BarGrouping.grouped,
+                    direction: BarDirection.vertical,
+                  ),
+                  tooltip: const TooltipConfig(enabled: true),
+                  animation: const ChartAnimation.none(),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -467,59 +574,64 @@ class _UserDashboardState extends State<UserDashboard> {
   Widget _buildUserTable(BuildContext context, List<ManagedUser> users) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: SingleChildScrollView(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            headingRowColor:
-                WidgetStateProperty.all(scheme.surfaceContainerLow),
-            columns: const [
-              DataColumn(label: Text('User ID')),
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('Company')),
-              DataColumn(label: Text('Role')),
-              DataColumn(label: Text('Email')),
-              DataColumn(label: Text('Plate Number')),
-              DataColumn(label: Text('Actions')),
-            ],
-            rows: users.map((user) {
-              return DataRow(
-                cells: [
-                  DataCell(Text(user.userId)),
-                  DataCell(Text(user.fullName)),
-                  DataCell(Text(user.company)),
-                  DataCell(_buildRoleChip(context, user.role)),
-                  DataCell(Text(user.email)),
-                  DataCell(Text(user.plateNumber ?? '—')),
-                  DataCell(
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          tooltip: 'Edit',
-                          onPressed: () => _openEditDialog(user),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.delete_outline,
-                            size: 18,
-                            color: AppTheme.dangerRed,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Card(
+          clipBehavior: Clip.antiAlias,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: constraints.maxWidth),
+              child: DataTable(
+                  headingRowColor:
+                      WidgetStateProperty.all(scheme.surfaceContainerLow),
+                  columns: const [
+                    DataColumn(label: Text('User ID')),
+                    DataColumn(label: Text('Name')),
+                    DataColumn(label: Text('Company')),
+                    DataColumn(label: Text('Role')),
+                    DataColumn(label: Text('Email')),
+                    DataColumn(label: Text('Plate Number')),
+                    DataColumn(label: Text('Actions')),
+                  ],
+                  rows: users.map((user) {
+                    return DataRow(
+                      cells: [
+                        DataCell(Text(user.userId)),
+                        DataCell(Text(user.fullName)),
+                        DataCell(Text(user.company)),
+                        DataCell(_buildRoleChip(context, user.role)),
+                        DataCell(Text(user.email)),
+                        DataCell(Text(user.plateNumber ?? '—')),
+                        DataCell(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                tooltip: 'Edit',
+                                onPressed: () => _openEditDialog(user),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.delete_outline,
+                                  size: 18,
+                                  color: AppTheme.dangerRed,
+                                ),
+                                tooltip: 'Delete',
+                                onPressed: () => _confirmDelete(user),
+                              ),
+                            ],
                           ),
-                          tooltip: 'Delete',
-                          onPressed: () => _confirmDelete(user),
                         ),
                       ],
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
+                    );
+                  }).toList(),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -975,6 +1087,58 @@ class _UserFormDialogState extends State<_UserFormDialog> {
                   ? '$label is required'
                   : null
               : null),
+    );
+  }
+}
+
+class _ChartCard extends StatelessWidget {
+  const _ChartCard({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(FleetSpacing.lg),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(FleetRadius.md),
+        border: Border.all(color: scheme.outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: FleetSpacing.md),
+          Expanded(child: child),
+        ],
+      ),
     );
   }
 }

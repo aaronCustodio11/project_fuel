@@ -217,7 +217,7 @@ class _SupplierTheftDetectionState extends State<SupplierTheftDetection> {
                   child: _ChartCard(
                     title: 'Alerts by Type',
                     subtitle: '$total total alerts',
-                    child: _buildTypeChart(theme),
+                    child: _buildTypeChart(),
                   ),
                 ),
                 const SizedBox(width: FleetSpacing.md),
@@ -315,7 +315,7 @@ class _SupplierTheftDetectionState extends State<SupplierTheftDetection> {
     );
   }
 
-  Widget _buildTypeChart(ThemeData theme) {
+  Widget _buildTypeChart() {
     final counts = <TheftAlertType, int>{};
     for (final a in _alerts) {
       counts[a.type] = (counts[a.type] ?? 0) + 1;
@@ -325,27 +325,36 @@ class _SupplierTheftDetectionState extends State<SupplierTheftDetection> {
     final labels = types.map(_typeLabel).toList();
 
     return RepaintBoundary(
-      child: BarChart(
-        data: BarChartData(
-          series: [
-            BarSeries.fromValues<double>(
-              name: 'Alerts',
-              values: values,
-              color: const Color(0xFF6366F1),
-              gradient: LinearGradient(
-                colors: [const Color(0xFF6366F1), const Color(0xFF8B5CF6)],
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-              ),
-            ),
-          ],
-          xAxis: BarXAxisConfig(categories: labels),
-          yAxis: const BarYAxisConfig(min: 0),
-          grouping: BarGrouping.grouped,
-          direction: BarDirection.vertical,
+      child: ChartTheme(
+        data: ChartTheme.of(context).copyWith(
+          labelStyle: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
-        tooltip: const TooltipConfig(enabled: true),
-        animation: const ChartAnimation.none(),
+        child: BarChart(
+          data: BarChartData(
+            series: [
+              BarSeries.fromValues<double>(
+                name: 'Alerts',
+                values: values,
+                color: const Color(0xFF6366F1),
+                gradient: LinearGradient(
+                  colors: [const Color(0xFF6366F1), const Color(0xFF8B5CF6)],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
+              ),
+            ],
+            xAxis: BarXAxisConfig(categories: labels),
+            yAxis: const BarYAxisConfig(min: 0, tickCount: 4),
+            grouping: BarGrouping.grouped,
+            direction: BarDirection.vertical,
+          ),
+          tooltip: const TooltipConfig(enabled: true),
+          animation: const ChartAnimation.none(),
+        ),
       ),
     );
   }
