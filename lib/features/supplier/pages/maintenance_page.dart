@@ -1,6 +1,8 @@
 import 'package:chartify/chartify.dart';
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:project_fuel/core/models/maintenance.dart';
+import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/services/maintenance_service.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 
@@ -12,100 +14,9 @@ class SupplierMaintenance extends StatefulWidget {
 }
 
 class _SupplierMaintenanceState extends State<SupplierMaintenance> {
-  List<MaintenanceRecord> _records = [
-    MaintenanceRecord(
-      id: 'MNT-001',
-      vehicleId: 'FL-2042',
-      vehicleName: 'Truck #FL-2042',
-      type: 'Oil Change',
-      description: 'Regular scheduled oil change and filter replacement',
-      status: MaintenanceStatus.scheduled,
-      priority: MaintenancePriority.medium,
-      scheduledDate: DateTime(2026, 7, 10),
-      cost: 450,
-      assignedTo: 'Mike Rodriguez',
-      createdAt: DateTime(2026, 6, 28),
-    ),
-    MaintenanceRecord(
-      id: 'MNT-002',
-      vehicleId: 'FL-1078',
-      vehicleName: 'Truck #FL-1078',
-      type: 'Brake Inspection',
-      description: 'Annual brake system inspection - pads, rotors, fluid levels',
-      status: MaintenanceStatus.inProgress,
-      priority: MaintenancePriority.high,
-      scheduledDate: DateTime(2026, 7, 5),
-      cost: 1200,
-      assignedTo: 'Mike Rodriguez',
-      createdAt: DateTime(2026, 6, 25),
-      notes: [
-        MaintenanceNote(
-          id: 'N-001', author: 'Mike Rodriguez',
-          note: 'Found rear brake pads worn beyond threshold. Replacing pads and resurfacing rotors.',
-          timestamp: DateTime(2026, 7, 5, 11, 15),
-        ),
-      ],
-    ),
-    MaintenanceRecord(
-      id: 'MNT-003',
-      vehicleId: 'FL-3091',
-      vehicleName: 'Truck #FL-3091',
-      type: 'Engine Diagnostics',
-      description: 'Check engine light on - diagnostic scan and troubleshooting',
-      status: MaintenanceStatus.inProgress,
-      priority: MaintenancePriority.critical,
-      scheduledDate: DateTime(2026, 7, 3),
-      cost: 2500,
-      assignedTo: 'Sarah Chen',
-      createdAt: DateTime(2026, 6, 22),
-      notes: [
-        MaintenanceNote(
-          id: 'N-002', author: 'Sarah Chen',
-          note: 'OBD-II scan shows P0302 - cylinder 2 misfire. Inspecting spark plugs and ignition coil.',
-          timestamp: DateTime(2026, 7, 3, 9, 45),
-        ),
-        MaintenanceNote(
-          id: 'N-003', author: 'Sarah Chen',
-          note: 'Found damaged ignition coil on cylinder 2. Replacing coil pack.',
-          timestamp: DateTime(2026, 7, 3, 14, 20),
-        ),
-      ],
-    ),
-    MaintenanceRecord(
-      id: 'MNT-004',
-      vehicleId: 'FL-1567',
-      vehicleName: 'Truck #FL-1567',
-      type: 'Tire Replacement',
-      description: 'All six tires need replacement - tread depth below legal limit',
-      status: MaintenanceStatus.scheduled,
-      priority: MaintenancePriority.high,
-      scheduledDate: DateTime(2026, 7, 12),
-      cost: 3600,
-      assignedTo: 'Mike Rodriguez',
-      createdAt: DateTime(2026, 6, 20),
-    ),
-    MaintenanceRecord(
-      id: 'MNT-005',
-      vehicleId: 'FL-4523',
-      vehicleName: 'Truck #FL-4523',
-      type: 'Transmission Service',
-      description: 'Transmission fluid flush and filter replacement',
-      status: MaintenanceStatus.completed,
-      priority: MaintenancePriority.medium,
-      scheduledDate: DateTime(2026, 6, 28),
-      completedDate: DateTime(2026, 6, 28, 14, 30),
-      cost: 1800,
-      assignedTo: 'Sarah Chen',
-      createdAt: DateTime(2026, 6, 15),
-      notes: [
-        MaintenanceNote(
-          id: 'N-004', author: 'Sarah Chen',
-          note: 'Completed transmission flush. Replaced filter and gasket. Test drive confirmed smooth shifting.',
-          timestamp: DateTime(2026, 6, 28, 14, 30),
-        ),
-      ],
-    ),
-  ];
+  List<MaintenanceRecord> _records = [];
+  final Map<int, String> _userNames = {};
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -114,8 +25,30 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
   }
 
   Future<void> _loadRecords() async {
-    final records = await MaintenanceService().getRecords();
-    if (mounted) setState(() => _records = records);
+    final results = await Future.wait([
+      MaintenanceService().getRecords(),
+      JsonReaderService.readListStatic('assets/mock_data/authentication.json'),
+    ]);
+
+    final records = results[0] as List<MaintenanceRecord>;
+    final users = results[1];
+    final names = <int, String>{};
+    for (final u in users) {
+      final id = u['userId'] as int?;
+      if (id != null) {
+        names[id] = '${u['firstName'] ?? ''} ${u['surName'] ?? ''}'.trim();
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _records = records;
+        _userNames
+          ..clear()
+          ..addAll(names);
+        _isLoading = false;
+      });
+    }
   }
 
   List<MaintenanceRecord> get _activeRecords =>
@@ -281,7 +214,9 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLow,
       body: SafeArea(
-        child: _buildContent(context),
+        child: _isLoading
+            ? Center(child: LoadingAnimationWidget.staggeredDotsWave(color: scheme.primary, size: 50))
+            : _buildContent(context),
       ),
     );
   }
@@ -622,6 +557,7 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
                   child: _MaintenanceCard(
                     record: r,
                     onUpdateStatus: () => _updateStatus(r),
+                    userNames: _userNames,
                   ),
                 )),
             ],
@@ -653,6 +589,7 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
                   child: _MaintenanceCard(
                     record: r,
                     onUpdateStatus: () => _updateStatus(r),
+                    userNames: _userNames,
                   ),
                 )),
             ],
@@ -666,8 +603,9 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
 class _MaintenanceCard extends StatelessWidget {
   final MaintenanceRecord record;
   final VoidCallback onUpdateStatus;
+  final Map<int, String> userNames;
 
-  const _MaintenanceCard({required this.record, required this.onUpdateStatus});
+  const _MaintenanceCard({required this.record, required this.onUpdateStatus, this.userNames = const {}});
 
   Color _statusColor(MaintenanceStatus s) => switch (s) {
     MaintenanceStatus.scheduled => AppTheme.accentBlue,
@@ -753,13 +691,14 @@ class _MaintenanceCard extends StatelessWidget {
               ],
             ),
           ],
-          if (record.assignedTo != null) ...[
+          if (record.assignedToId != null) ...[
             const SizedBox(height: FleetSpacing.xs),
             Row(
               children: [
                 Icon(Icons.person_outline, size: 12, color: scheme.onSurfaceVariant),
                 const SizedBox(width: FleetSpacing.xs),
-                Text(record.assignedTo!, style: theme.textTheme.labelSmall?.copyWith(
+                Text(userNames[record.assignedToId] ?? 'User #${record.assignedToId}',
+                    style: theme.textTheme.labelSmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                 )),
                 const Spacer(),

@@ -1,86 +1,76 @@
 class TruckModel {
   final String truckId;
   final String plateNumber;
-  final int driverId;
+  final int? driverId;
   final int supplierId;
   final String status;
   final int speedKph;
   final int heading;
   final double latitude;
   final double longitude;
-  final List<DeliveryModel> deliveries;
 
   const TruckModel({
     required this.truckId,
     required this.plateNumber,
-    required this.driverId,
-    required this.supplierId,
-    required this.status,
-    required this.speedKph,
-    required this.heading,
-    required this.latitude,
-    required this.longitude,
-    required this.deliveries,
+    this.driverId,
+    this.supplierId = 0,
+    this.status = '',
+    this.speedKph = 0,
+    this.heading = 0,
+    this.latitude = 0.0,
+    this.longitude = 0.0,
   });
 
   factory TruckModel.fromJson(Map<String, dynamic> json) {
     final location = json['currentLocation'] as Map<String, dynamic>? ?? {};
-    final deliveryList = json['deliveries'] as List<dynamic>? ?? [];
 
     return TruckModel(
       truckId: json['truckId'] as String? ?? '',
       plateNumber: json['plateNumber'] as String? ?? '',
-      driverId: json['driverId'] as int? ?? 0,
+      driverId: json['driverId'] as int?,
       supplierId: json['supplierId'] as int? ?? 0,
       status: json['status'] as String? ?? '',
       speedKph: json['speedKph'] as int? ?? 0,
       heading: json['heading'] as int? ?? 0,
       latitude: (location['latitude'] as num? ?? 0.0).toDouble(),
       longitude: (location['longitude'] as num? ?? 0.0).toDouble(),
-      deliveries: deliveryList
-          .map((d) => DeliveryModel.fromJson(d as Map<String, dynamic>))
-          .toList(),
     );
   }
 }
 
 class DeliveryModel {
-  final String deliveryId;
-  final int managerId;
-  final String gasStation;
-  final double destLatitude;
-  final double destLongitude;
-  final String fuelType;
-  final int volumeLiters;
+  final String id;
+  final String truckId;
+  final String stationId;
+  final String product;
+  final int quantity;
+  final String unit;
   final String status;
-  final DateTime? eta;
+  final DateTime? scheduledDate;
+  final DateTime? completedDate;
+  final String sourceStationId;
+  final String notes;
+
+  final String stationName;
+  final double stationLat;
+  final double stationLng;
+  final String sourceStationName;
 
   const DeliveryModel({
-    required this.deliveryId,
-    required this.managerId,
-    required this.gasStation,
-    required this.destLatitude,
-    required this.destLongitude,
-    required this.fuelType,
-    required this.volumeLiters,
+    required this.id,
+    required this.truckId,
+    required this.stationId,
+    required this.product,
+    required this.quantity,
+    required this.unit,
     required this.status,
-    this.eta,
+    this.scheduledDate,
+    this.completedDate,
+    this.sourceStationId = '',
+    this.notes = '',
+    this.stationName = '',
+    this.stationLat = 0.0,
+    this.stationLng = 0.0,
+    this.sourceStationName = '',
   });
-
-  factory DeliveryModel.fromJson(Map<String, dynamic> json) {
-    final destination = json['destination'] as Map<String, dynamic>? ?? {};
-    final etaStr = json['eta'] as String?;
-
-    return DeliveryModel(
-      deliveryId: json['deliveryId'] as String? ?? '',
-      managerId: json['managerId'] as int? ?? 0,
-      gasStation: json['gasStation'] as String? ?? '',
-      destLatitude: (destination['latitude'] as num? ?? 0.0).toDouble(),
-      destLongitude: (destination['longitude'] as num? ?? 0.0).toDouble(),
-      fuelType: json['fuelType'] as String? ?? '',
-      volumeLiters: json['volumeLiters'] as int? ?? 0,
-      status: json['status'] as String? ?? '',
-      eta: etaStr != null ? DateTime.tryParse(etaStr) : null,
-    );
-  }
 }

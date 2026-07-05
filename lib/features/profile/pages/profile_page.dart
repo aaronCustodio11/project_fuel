@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:project_fuel/core/routes/app_routes.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
@@ -67,7 +68,7 @@ class _ProfileScreenPageState extends State<ProfileScreenPage> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1200),
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
+                      ? Center(child: LoadingAnimationWidget.staggeredDotsWave(color: theme.colorScheme.primary, size: 50))
                       : SingleChildScrollView(
                           padding: const EdgeInsets.all(FleetSpacing.xl),
                           child: _buildContent(theme, isWide),

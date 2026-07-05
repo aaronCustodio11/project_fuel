@@ -4,6 +4,7 @@
     "plateNumber": "ABC 1234",
     "driverId": 1,
     "supplierId": 9,
+    "fuelLevel": 0.72,
     "status": "En Route",
     "speedKph": 48,
     "heading": 105,
@@ -11,40 +12,14 @@
       "latitude": 13.7685,
       "longitude": 121.0662
     },
-    "deliveries": [
-      {
-        "deliveryId": "DEL-001",
-        "managerId": 3,
-        "gasStation": "FleetSense Batangas Central",
-        "destination": {
-          "latitude": 13.7752,
-          "longitude": 121.0724
-        },
-        "fuelType": "Diesel",
-        "volumeLiters": 12000,
-        "status": "En Route",
-        "eta": "2026-07-04T10:30:00Z"
-      },
-      {
-        "deliveryId": "DEL-002",
-        "managerId": 4,
-        "gasStation": "FleetSense Balagtas",
-        "destination": {
-          "latitude": 13.7824,
-          "longitude": 121.0816
-        },
-        "fuelType": "Premium",
-        "volumeLiters": 8000,
-        "status": "Pending",
-        "eta": "2026-07-04T11:20:00Z"
-      }
-    ]
+    "deliveries": []
   },
   {
     "truckId": "TRK-002",
     "plateNumber": "DEF 5678",
     "driverId": 2,
     "supplierId": 9,
+    "fuelLevel": 0.34,
     "status": "Delivering",
     "speedKph": 0,
     "heading": 0,
@@ -52,40 +27,14 @@
       "latitude": 13.7549,
       "longitude": 121.0608
     },
-    "deliveries": [
-      {
-        "deliveryId": "DEL-003",
-        "managerId": 3,
-        "gasStation": "FleetSense Alangilan",
-        "destination": {
-          "latitude": 13.7549,
-          "longitude": 121.0608
-        },
-        "fuelType": "Regular",
-        "volumeLiters": 10000,
-        "status": "Delivering",
-        "eta": "2026-07-04T09:45:00Z"
-      },
-      {
-        "deliveryId": "DEL-004",
-        "managerId": 4,
-        "gasStation": "FleetSense Lipa",
-        "destination": {
-          "latitude": 13.9427,
-          "longitude": 121.1631
-        },
-        "fuelType": "Diesel",
-        "volumeLiters": 9000,
-        "status": "Pending",
-        "eta": "2026-07-04T13:15:00Z"
-      }
-    ]
+    "deliveries": []
   },
   {
     "truckId": "TRK-003",
     "plateNumber": "GHI 9012",
     "driverId": 5,
     "supplierId": 10,
+    "fuelLevel": 0.88,
     "status": "En Route",
     "speedKph": 55,
     "heading": 275,
@@ -93,34 +42,7 @@
       "latitude": 13.8021,
       "longitude": 121.0875
     },
-    "deliveries": [
-      {
-        "deliveryId": "DEL-005",
-        "managerId": 7,
-        "gasStation": "FleetSense Sto. Tomas",
-        "destination": {
-          "latitude": 14.1076,
-          "longitude": 121.1455
-        },
-        "fuelType": "Premium",
-        "volumeLiters": 14000,
-        "status": "En Route",
-        "eta": "2026-07-04T11:50:00Z"
-      },
-      {
-        "deliveryId": "DEL-006",
-        "managerId": 8,
-        "gasStation": "FleetSense Tanauan",
-        "destination": {
-          "latitude": 14.0842,
-          "longitude": 121.1498
-        },
-        "fuelType": "Regular",
-        "volumeLiters": 7000,
-        "status": "Pending",
-        "eta": "2026-07-04T12:40:00Z"
-      }
-    ]
+    "deliveries": []
   },
   {
     "truckId": "TRK-004",
@@ -134,33 +56,79 @@
       "latitude": 13.7910,
       "longitude": 121.0712
     },
-    "deliveries": [
-      {
-        "deliveryId": "DEL-007",
-        "managerId": 7,
-        "gasStation": "FleetSense Batangas Port",
-        "destination": {
-          "latitude": 13.7571,
-          "longitude": 121.0548
-        },
-        "fuelType": "Diesel",
-        "volumeLiters": 15000,
-        "status": "Completed",
-        "eta": "2026-07-04T08:30:00Z"
-      },
-      {
-        "deliveryId": "DEL-008",
-        "managerId": 8,
-        "gasStation": "FleetSense San Pascual",
-        "destination": {
-          "latitude": 13.8102,
-          "longitude": 121.0214
-        },
-        "fuelType": "Premium",
-        "volumeLiters": 6000,
-        "status": "Completed",
-        "eta": "2026-07-04T09:15:00Z"
-      }
-    ]
+    "deliveries": []
+  },
+  {
+    "truckId": "TRK-005",
+    "plateNumber": "MNO 7890",
+    "driverId": null,
+    "supplierId": 9,
+    "fuelLevel": 0.60,
+    "status": "Idle",
+    "speedKph": 0,
+    "heading": 0,
+    "currentLocation": {
+      "latitude": 13.7850,
+      "longitude": 121.0650
+    },
+    "deliveries": []
+  },
+  {
+    "truckId": "TRK-006",
+    "plateNumber": "PQR 1234",
+    "driverId": null,
+    "supplierId": 9,
+    "status": "Maintenance",
+    "speedKph": 0,
+    "heading": 0,
+    "currentLocation": {
+      "latitude": 13.7950,
+      "longitude": 121.0750
+    },
+    "deliveries": []
+  },
+  {
+    "truckId": "TRK-007",
+    "plateNumber": "STU 5678",
+    "driverId": null,
+    "supplierId": 10,
+    "fuelLevel": 0.45,
+    "status": "En Route",
+    "speedKph": 42,
+    "heading": 180,
+    "currentLocation": {
+      "latitude": 13.8000,
+      "longitude": 121.0800
+    },
+    "deliveries": []
+  },
+  {
+    "truckId": "TRK-008",
+    "plateNumber": "VWX 9012",
+    "driverId": null,
+    "supplierId": 10,
+    "fuelLevel": 0.80,
+    "status": "Idle",
+    "speedKph": 0,
+    "heading": 0,
+    "currentLocation": {
+      "latitude": 13.7750,
+      "longitude": 121.0550
+    },
+    "deliveries": []
+  },
+  {
+    "truckId": "TRK-009",
+    "plateNumber": "YZA 3456",
+    "driverId": null,
+    "supplierId": 10,
+    "status": "Maintenance",
+    "speedKph": 0,
+    "heading": 0,
+    "currentLocation": {
+      "latitude": 13.8100,
+      "longitude": 121.0900
+    },
+    "deliveries": []
   }
 ]

@@ -1,0 +1,114 @@
+[
+  {
+    "id": "THF-001",
+    "vehicleId": "TRK-001",
+    "type": "fuelTheft",
+    "severity": "high",
+    "description": "Fuel level dropped 15L in 30 minutes during off-hours",
+    "timestamp": "2026-07-05T02:30:00.000",
+    "location": {
+      "lat": 13.7580,
+      "lng": 121.0580
+    },
+    "isResolved": false,
+    "resolvedAt": null,
+    "resolvedBy": null,
+    "detectedBy": 4
+  },
+  {
+    "id": "THF-002",
+    "vehicleId": "TRK-002",
+    "type": "fuelTheft",
+    "severity": "medium",
+    "description": "Irregular fuel consumption pattern detected during delivery route",
+    "timestamp": "2026-07-04T14:15:00.000",
+    "location": {
+      "lat": 13.7870,
+      "lng": 121.0250
+    },
+    "isResolved": true,
+    "resolvedAt": "2026-07-04T16:00:00.000",
+    "resolvedBy": 3,
+    "detectedBy": 1
+  },
+  {
+    "id": "THF-003",
+    "vehicleId": "TRK-004",
+    "type": "fuelTheft",
+    "severity": "critical",
+    "description": "GPS tracker tampered - vehicle location unknown for 2 hours",
+    "timestamp": "2026-07-05T22:00:00.000",
+    "location": {
+      "lat": 13.9410,
+      "lng": 121.1620
+    },
+    "isResolved": false,
+    "resolvedAt": null,
+    "resolvedBy": null,
+    "detectedBy": 7
+  },
+  {
+    "id": "THF-004",
+    "vehicleId": "TRK-005",
+    "type": "fuelTheft",
+    "severity": "low",
+    "description": "Minor fuel discrepancy - 3L unaccounted after trip",
+    "timestamp": "2026-07-03T09:45:00.000",
+    "location": {
+      "lat": 13.7700,
+      "lng": 121.0480
+    },
+    "isResolved": true,
+    "resolvedAt": "2026-07-03T11:00:00.000",
+    "resolvedBy": 3,
+    "detectedBy": 3
+  },
+  {
+    "id": "THF-005",
+    "vehicleId": "TRK-003",
+    "type": "fuelTheft",
+    "severity": "high",
+    "description": "Fuel cap seal broken - possible siphoning detected",
+    "timestamp": "2026-07-05T04:00:00.000",
+    "location": {
+      "lat": 13.7925,
+      "lng": 121.0721
+    },
+    "isResolved": false,
+    "resolvedAt": null,
+    "resolvedBy": null,
+    "detectedBy": 8
+  },
+  {
+    "id": "THF-006",
+    "vehicleId": "TRK-007",
+    "type": "fuelTheft",
+    "severity": "medium",
+    "description": "Unexpected fuel consumption during idle period at depot",
+    "timestamp": "2026-07-04T20:30:00.000",
+    "location": {
+      "lat": 13.7580,
+      "lng": 121.0580
+    },
+    "isResolved": false,
+    "resolvedAt": null,
+    "resolvedBy": null,
+    "detectedBy": 4
+  },
+  {
+    "id": "THF-007",
+    "vehicleId": "TRK-006",
+    "type": "fuelTheft",
+    "severity": "critical",
+    "description": "Multiple unauthorized fuel draws detected overnight",
+    "timestamp": "2026-07-05T03:15:00.000",
+    "location": {
+      "lat": 13.7550,
+      "lng": 121.0550
+    },
+    "isResolved": false,
+    "resolvedAt": null,
+    "resolvedBy": null,
+    "detectedBy": 7
+  }
+]

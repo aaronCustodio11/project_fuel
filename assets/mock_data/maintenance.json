@@ -1,7 +1,7 @@
 [
   {
     "id": "MNT-001",
-    "vehicleId": "FL-2042",
+    "vehicleId": "TRK-001",
     "vehicleName": "Truck #FL-2042",
     "type": "Oil Change",
     "description": "Regular scheduled oil change and filter replacement",
@@ -11,12 +11,12 @@
     "completedDate": null,
     "cost": 450.0,
     "notes": [],
-    "assignedTo": "Mike Rodriguez",
+    "assignedToId": 1,
     "createdAt": "2026-06-28T10:30:00.000"
   },
   {
     "id": "MNT-002",
-    "vehicleId": "FL-1078",
+    "vehicleId": "TRK-002",
     "vehicleName": "Truck #FL-1078",
     "type": "Brake Inspection",
     "description": "Annual brake system inspection - pads, rotors, fluid levels",
@@ -33,12 +33,12 @@
         "timestamp": "2026-07-05T11:15:00.000"
       }
     ],
-    "assignedTo": "Mike Rodriguez",
+    "assignedToId": 2,
     "createdAt": "2026-06-25T14:00:00.000"
   },
   {
     "id": "MNT-003",
-    "vehicleId": "FL-3091",
+    "vehicleId": "TRK-003",
     "vehicleName": "Truck #FL-3091",
     "type": "Engine Diagnostics",
     "description": "Check engine light on - diagnostic scan and troubleshooting",
@@ -61,12 +61,12 @@
         "timestamp": "2026-07-03T14:20:00.000"
       }
     ],
-    "assignedTo": "Sarah Chen",
+    "assignedToId": 5,
     "createdAt": "2026-06-22T08:15:00.000"
   },
   {
     "id": "MNT-004",
-    "vehicleId": "FL-1567",
+    "vehicleId": "TRK-005",
     "vehicleName": "Truck #FL-1567",
     "type": "Tire Replacement",
     "description": "All six tires need replacement - tread depth below legal limit",
@@ -76,12 +76,12 @@
     "completedDate": null,
     "cost": 3600.0,
     "notes": [],
-    "assignedTo": "Mike Rodriguez",
+    "assignedToId": 3,
     "createdAt": "2026-06-20T16:00:00.000"
   },
   {
     "id": "MNT-005",
-    "vehicleId": "FL-4523",
+    "vehicleId": "TRK-004",
     "vehicleName": "Truck #FL-4523",
     "type": "Transmission Service",
     "description": "Transmission fluid flush and filter replacement",
@@ -98,12 +98,12 @@
         "timestamp": "2026-06-28T14:30:00.000"
       }
     ],
-    "assignedTo": "Sarah Chen",
+    "assignedToId": 6,
     "createdAt": "2026-06-15T11:00:00.000"
   },
   {
     "id": "MNT-006",
-    "vehicleId": "FL-5890",
+    "vehicleId": "TRK-006",
     "vehicleName": "Truck #FL-5890",
     "type": "AC Repair",
     "description": "Air conditioning not cooling properly - refrigerant recharge needed",
@@ -113,12 +113,12 @@
     "completedDate": null,
     "cost": 350.0,
     "notes": [],
-    "assignedTo": "James Wilson",
+    "assignedToId": 4,
     "createdAt": "2026-07-01T09:30:00.000"
   },
   {
     "id": "MNT-007",
-    "vehicleId": "FL-3321",
+    "vehicleId": "TRK-007",
     "vehicleName": "Truck #FL-3321",
     "type": "Electrical System",
     "description": "Battery keeps draining overnight - parasitic draw diagnosis",
@@ -135,12 +135,12 @@
         "timestamp": "2026-07-06T10:30:00.000"
       }
     ],
-    "assignedTo": "James Wilson",
+    "assignedToId": 7,
     "createdAt": "2026-07-02T13:45:00.000"
   },
   {
     "id": "MNT-008",
-    "vehicleId": "FL-6701",
+    "vehicleId": "TRK-008",
     "vehicleName": "Truck #FL-6701",
     "type": "Annual Inspection",
     "description": "Annual DOT compliance inspection - brakes, lights, suspension, emissions",
@@ -157,12 +157,12 @@
         "timestamp": "2026-06-25T16:00:00.000"
       }
     ],
-    "assignedTo": "Mike Rodriguez",
+    "assignedToId": 8,
     "createdAt": "2026-06-10T10:00:00.000"
   },
   {
     "id": "MNT-009",
-    "vehicleId": "FL-8912",
+    "vehicleId": "TRK-009",
     "vehicleName": "Truck #FL-8912",
     "type": "Suspension Repair",
     "description": "Front suspension clunking noise - possible worn bushings or struts",
@@ -172,12 +172,12 @@
     "completedDate": null,
     "cost": 2100.0,
     "notes": [],
-    "assignedTo": "Sarah Chen",
+    "assignedToId": 7,
     "createdAt": "2026-07-05T11:20:00.000"
   },
   {
     "id": "MNT-010",
-    "vehicleId": "FL-2042",
+    "vehicleId": "TRK-001",
     "vehicleName": "Truck #FL-2042",
     "type": "Coolant System",
     "description": "Coolant leak near radiator - pressure test and repair",
@@ -194,12 +194,12 @@
         "timestamp": "2026-06-20T13:00:00.000"
       }
     ],
-    "assignedTo": "James Wilson",
+    "assignedToId": 1,
     "createdAt": "2026-06-18T15:00:00.000"
   },
   {
     "id": "MNT-011",
-    "vehicleId": "FL-4523",
+    "vehicleId": "TRK-004",
     "vehicleName": "Truck #FL-4523",
     "type": "Fuel System",
     "description": "Fuel injector cleaning and fuel filter replacement",
@@ -209,12 +209,12 @@
     "completedDate": null,
     "cost": 500.0,
     "notes": [],
-    "assignedTo": "Mike Rodriguez",
+    "assignedToId": 6,
     "createdAt": "2026-07-08T08:00:00.000"
   },
   {
     "id": "MNT-012",
-    "vehicleId": "FL-1078",
+    "vehicleId": "TRK-002",
     "vehicleName": "Truck #FL-1078",
     "type": "Alignment & Balance",
     "description": "Vehicle pulls to the right - wheel alignment and tire balance",
@@ -231,7 +231,7 @@
         "timestamp": "2026-06-15T11:00:00.000"
       }
     ],
-    "assignedTo": "Mike Rodriguez",
+    "assignedToId": 2,
     "createdAt": "2026-06-12T09:00:00.000"
   }
 ]

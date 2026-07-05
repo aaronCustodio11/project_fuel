@@ -43,6 +43,7 @@ dependencies:
   water_drop_nav_bar: ^2.2.2
   http: ^1.6.0
   chartify: ^1.0.2
+  loading_animation_widget: ^1.3.0
 
 dev_dependencies:
   flutter_test:
@@ -69,8 +70,11 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
   - assets/mock_data/authentication.json
-  - assets/mock_data/vehicles.json
+  - assets/mock_data/deliveries.json
   - assets/mock_data/maintenance.json
+  - assets/mock_data/stations.json
+  - assets/mock_data/theft_alerts.json
+  - assets/mock_data/vehicles.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

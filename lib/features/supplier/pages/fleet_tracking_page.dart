@@ -1,8 +1,14 @@
+import 'dart:math' as math;
 import 'package:chartify/chartify.dart';
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:project_fuel/core/models/fleet_tracking.dart';
+import 'package:project_fuel/core/services/authentication.dart';
+import 'package:project_fuel/core/services/deliveries.dart';
+import 'package:project_fuel/core/services/json_reader.dart';
+import 'package:project_fuel/core/services/osrm_routing.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:project_fuel/shared/widgets/role_badge.dart';
 
@@ -15,66 +21,179 @@ class SupplierFleetTracking extends StatefulWidget {
 
 class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
   final _mapController = MapController();
+  final _authService = AuthenticationService();
+  final _deliveryService = DeliveryService();
+  final _routingService = OSRMRoutingService();
 
   Object? _selectedItem;
 
-  final _trucks = [
-    FleetTruck(
-      id: 'TRK-001', name: 'Truck #FL-2042', plateNumber: 'ABC-1234',
-      position: const LatLng(14.5995, 120.9842),
-      status: TruckStatus.moving, driver: 'Juan Dela Cruz',
-      speed: 65, fuelLevel: 0.72, lastUpdate: '2 min ago',
-    ),
-    FleetTruck(
-      id: 'TRK-002', name: 'Truck #FL-1078', plateNumber: 'XYZ-5678',
-      position: const LatLng(14.6150, 120.9750),
-      status: TruckStatus.moving, driver: 'Maria Santos',
-      speed: 48, fuelLevel: 0.55, lastUpdate: '5 min ago',
-    ),
-    FleetTruck(
-      id: 'TRK-003', name: 'Truck #FL-3091', plateNumber: 'DEF-9012',
-      position: const LatLng(14.5800, 120.9950),
-      status: TruckStatus.idle, driver: 'Pedro Reyes',
-      speed: 0, fuelLevel: 0.88, lastUpdate: '12 min ago',
-    ),
-    FleetTruck(
-      id: 'TRK-004', name: 'Truck #FL-4523', plateNumber: 'GHI-3456',
-      position: const LatLng(14.6100, 120.9600),
-      status: TruckStatus.maintenance, driver: 'Ana Cruz',
-      speed: 0, fuelLevel: 0.30, lastUpdate: '1 hour ago',
-    ),
-    FleetTruck(
-      id: 'TRK-005', name: 'Truck #FL-1567', plateNumber: 'JKL-7890',
-      position: const LatLng(14.5900, 120.9700),
-      status: TruckStatus.offDuty, driver: 'Jose Garcia',
-      speed: 0, fuelLevel: 0.45, lastUpdate: '3 hours ago',
-    ),
-  ];
+  List<FleetTruck> _trucks = [];
+  List<FleetStation> _stations = [];
+  List<Map<String, dynamic>> _authUsers = [];
+  bool _isLoading = true;
+  LatLng? _userPosition;
+  bool _followUser = true;
+  FleetTruck? _trackingTruck;
+  List<_DeliveryStop> _trackedStops = [];
+  List<LatLng>? _routePoints;
+  bool _isLoadingRoute = false;
 
-  final _stations = [
-    FleetStation(
-      id: 'STN-001', name: 'Main Depot Station',
-      position: const LatLng(14.6050, 120.9900),
-      type: StationType.gasStation, address: '123 Main St, Manila',
-      fuelLevel: 0.85,
-    ),
-    FleetStation(
-      id: 'STN-002', name: 'North Warehouse',
-      position: const LatLng(14.6250, 120.9650),
-      type: StationType.warehouse, address: '456 North Ave, Quezon City',
-    ),
-    FleetStation(
-      id: 'STN-003', name: 'South Gas Station',
-      position: const LatLng(14.5700, 120.9850),
-      type: StationType.gasStation, address: '789 South Rd, Makati',
-      fuelLevel: 0.40,
-    ),
-    FleetStation(
-      id: 'STN-004', name: 'East Logistics Hub',
-      position: const LatLng(14.5950, 121.0050),
-      type: StationType.warehouse, address: '321 East Ave, Pasig',
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final results = await Future.wait([
+      JsonReaderService.readListStatic('assets/mock_data/vehicles.json'),
+      JsonReaderService.readListStatic('assets/mock_data/stations.json'),
+      JsonReaderService.readListStatic('assets/mock_data/authentication.json'),
+      _authService.getSavedUser(),
+    ]);
+
+    final vehicles = results[0] as List<dynamic>;
+    final stations = results[1] as List<dynamic>;
+    final users = results[2] as List<dynamic>;
+    final user = results[3] as AuthUser?;
+    final supplierId = user?.supplierId;
+
+    if (mounted) {
+      setState(() {
+        _trucks = vehicles
+            .whereType<Map<String, dynamic>>()
+            .map((v) => FleetTruck.fromVehicleJson(v))
+            .where((t) => supplierId == null || t.supplierId == supplierId)
+            .toList();
+        _stations = stations
+            .whereType<Map<String, dynamic>>()
+            .map((s) => FleetStation.fromJson(s))
+            .where((s) => supplierId == null || s.supplierId == supplierId)
+            .toList();
+        _authUsers = users.cast<Map<String, dynamic>>();
+        _userPosition = (user?.latitude != null && user?.longitude != null)
+            ? LatLng(user!.latitude!, user.longitude!)
+            : null;
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _driverName(int? id) {
+    if (id == null) return '—';
+    for (final u in _authUsers) {
+      if (u['userId'] == id) return '${u['firstName'] ?? ''} ${u['surName'] ?? ''}'.trim();
+    }
+    return '—';
+  }
+
+  void _onMapEvent(MapEvent event) {
+    if ((event is MapEventMoveEnd || event is MapEventFlingAnimationEnd) && _followUser) {
+      setState(() => _followUser = false);
+    }
+  }
+
+  void _centerOnUser() {
+    if (_userPosition == null) return;
+    _mapController.move(_userPosition!, _mapController.camera.zoom);
+    setState(() => _followUser = true);
+  }
+
+  void _trackTruck(FleetTruck truck) {
+    _mapController.move(truck.position, 16);
+    setState(() {
+      _trackingTruck = truck;
+      _selectedItem = truck;
+      _followUser = false;
+      _trackedStops = [];
+      _routePoints = null;
+    });
+    _fetchRouteForTruck(truck);
+  }
+
+  Future<void> _fetchRouteForTruck(FleetTruck truck) async {
+    final deliveries = await _deliveryService.getAllDeliveries();
+    final truckDeliveries = deliveries.where((d) => d.truckId == truck.id).toList();
+
+    if (truckDeliveries.isEmpty) return;
+
+    final stops = <LatLng>[];
+    final stopNames = <LatLng, _DeliveryStop>{};
+
+    for (final d in truckDeliveries) {
+      final pos = LatLng(d.stationLat, d.stationLng);
+      stops.add(pos);
+      stopNames[pos] = _DeliveryStop(
+        position: pos,
+        name: d.stationName,
+        product: d.product,
+        quantity: d.quantity,
+        unit: d.unit,
+      );
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _trackedStops = stopNames.values.toList();
+      _isLoadingRoute = true;
+    });
+
+    final waypoints = [truck.position, ...stops];
+    final result = await _routingService.getRoute(waypoints: waypoints);
+
+    if (!mounted) return;
+
+    if (result != null) {
+      double totalKm = 0;
+      for (var i = 0; i < result.polyline.length - 1; i++) {
+        totalKm += _calculateDistanceKm(result.polyline[i], result.polyline[i + 1]);
+      }
+
+      setState(() {
+        _routePoints = result.polyline;
+        _isLoadingRoute = false;
+      });
+
+      _showRouteLoadedNotification(truck, totalKm);
+    } else {
+      setState(() => _isLoadingRoute = false);
+    }
+  }
+
+  double _calculateDistanceKm(LatLng a, LatLng b) {
+    const earthRadius = 6371.0;
+    final lat1 = a.latitude * (math.pi / 180);
+    final lat2 = b.latitude * (math.pi / 180);
+    final deltaLat = (b.latitude - a.latitude) * (math.pi / 180);
+    final deltaLng = (b.longitude - a.longitude) * (math.pi / 180);
+    final x = math.sin(deltaLat / 2) * math.sin(deltaLat / 2) +
+        math.cos(lat1) * math.cos(lat2) * math.sin(deltaLng / 2) * math.sin(deltaLng / 2);
+    return earthRadius * 2 * math.asin(math.sqrt(x));
+  }
+
+  void _showRouteLoadedNotification(FleetTruck truck, double totalKm) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Route loaded for ${truck.name} — ${totalKm.toStringAsFixed(1)} km'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _clearTracking() {
+    if (_userPosition != null) {
+      _mapController.move(_userPosition!, 15);
+    }
+    setState(() {
+      _trackingTruck = null;
+      _selectedItem = null;
+      _trackedStops = [];
+      _routePoints = null;
+      _followUser = true;
+    });
+  }
 
   Color _truckStatusColor(TruckStatus s) => switch (s) {
     TruckStatus.moving => AppTheme.successGreen,
@@ -90,7 +209,9 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLow,
       body: SafeArea(
-        child: _buildContent(context),
+        child: _isLoading
+            ? Center(child: LoadingAnimationWidget.staggeredDotsWave(color: scheme.primary, size: 50))
+            : _buildContent(context),
       ),
     );
   }
@@ -177,41 +298,9 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
               padding: const EdgeInsets.symmetric(horizontal: FleetSpacing.xl),
               child: Row(
                 children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(FleetRadius.lg),
-                      child: FlutterMap(
-                        mapController: _mapController,
-                        options: const MapOptions(
-                          initialCenter: LatLng(14.5995, 120.9842),
-                          initialZoom: 13,
-                          interactionOptions: InteractionOptions(
-                            flags: InteractiveFlag.all,
-                          ),
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.example.project_fuel',
-                          ),
-                          MarkerLayer(markers: [
-                            ..._trucks.map(_buildTruckMarker),
-                            ..._stations.map(_buildStationMarker),
-                          ]),
-                        ],
-                      ),
-                    ),
-                  ),
+                  Expanded(child: _buildMap()),
                   const SizedBox(width: FleetSpacing.md),
-                  SizedBox(
-                    width: 320,
-                    child: _DetailPanel(
-                      item: _selectedItem,
-                      truckStatusColor: _truckStatusColor,
-                      onNotifyDriver: _showNotifyTruckSheet,
-                      onDismiss: () => setState(() => _selectedItem = null),
-                    ),
-                  ),
+                  SizedBox(width: 320, child: _buildSidePanel()),
                 ],
               ),
             ),
@@ -274,8 +363,142 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
     );
   }
 
+  Marker _buildStopMarker(_DeliveryStop stop) {
+    return Marker(
+      point: stop.position,
+      width: 46,
+      height: 46,
+      child: RoleBadge(
+        icon: Icons.local_gas_station_rounded,
+        color: AppTheme.accentBlue,
+        size: 44,
+        tooltip: stop.name,
+      ),
+    );
+  }
+
   void _onItemTap(Object item) {
-    setState(() => _selectedItem = item);
+    if (item is FleetTruck) {
+      _trackTruck(item);
+    } else {
+      setState(() {
+        _selectedItem = item;
+        _trackingTruck = null;
+      });
+    }
+  }
+
+  Widget _buildMap() {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(FleetRadius.lg),
+          child: FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: const LatLng(13.76, 121.06),
+              initialZoom: 15,
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all,
+              ),
+              onMapEvent: _onMapEvent,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.example.project_fuel',
+              ),
+              MarkerLayer(markers: [
+                if (_userPosition != null)
+                  Marker(
+                    point: _userPosition!,
+                    width: 40,
+                    height: 40,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.person, color: Colors.white, size: 20),
+                    ),
+                  ),
+                if (_trackingTruck != null) ...[
+                  _buildTruckMarker(_trackingTruck!),
+                  for (final stop in _trackedStops)
+                    _buildStopMarker(stop),
+                ] else ...[
+                  ..._trucks.map(_buildTruckMarker),
+                  ..._stations.map(_buildStationMarker),
+                ],
+              ]),
+              if (_routePoints != null && _routePoints!.length >= 2)
+                PolylineLayer(polylines: [
+                  Polyline(
+                    points: _routePoints!,
+                    color: Theme.of(context).colorScheme.secondary,
+                    strokeWidth: 4,
+                    borderColor: Colors.white,
+                    borderStrokeWidth: 2,
+                  ),
+                ]),
+            ],
+          ),
+        ),
+        if (_userPosition != null)
+          Positioned(
+            right: 12,
+            bottom: 12,
+            child: FloatingActionButton.small(
+              heroTag: 'locate',
+              onPressed: _centerOnUser,
+              backgroundColor: _followUser
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.surface,
+              tooltip: 'Center on my location',
+              child: Icon(
+                Icons.my_location_rounded,
+                color: _followUser
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSidePanel() {
+    return _trackingTruck != null && _trackedStops.isNotEmpty
+        ? _DeliveryTrackerPanel(
+            truck: _trackingTruck!,
+            stops: _trackedStops,
+            routePoints: _routePoints,
+            isLoadingRoute: _isLoadingRoute,
+            onShowAll: _clearTracking,
+          )
+        : _selectedItem != null
+            ? _DetailPanel(
+                item: _selectedItem,
+                truckStatusColor: _truckStatusColor,
+                onNotifyDriver: _showNotifyTruckSheet,
+                onDismiss: _clearTracking,
+                driverName: _driverName,
+                onShowAll: _trackingTruck != null ? _clearTracking : null,
+              )
+            : _TruckList(
+                trucks: _trucks,
+                driverName: _driverName,
+                truckStatusColor: _truckStatusColor,
+                onSelect: _trackTruck,
+              );
   }
 
   void _showAddLocationSheet() {
@@ -343,8 +566,8 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
                               FlutterMap(
                                 mapController: mapCtrl,
                                 options: MapOptions(
-                                  initialCenter: const LatLng(14.5995, 120.9842),
-                                  initialZoom: 12,
+                                  initialCenter: const LatLng(13.76, 121.06),
+                                  initialZoom: 14,
                                   interactionOptions: const InteractionOptions(
                                     flags: InteractiveFlag.all,
                                   ),
@@ -724,6 +947,7 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
             child: _FuelMonitorCard(
               truck: truck,
               statusColor: _truckStatusColor(truck.status),
+              driverName: _driverName(truck.driverId),
             ),
           )),
         ],
@@ -735,8 +959,9 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
 class _FuelMonitorCard extends StatelessWidget {
   final FleetTruck truck;
   final Color statusColor;
+  final String driverName;
 
-  const _FuelMonitorCard({required this.truck, required this.statusColor});
+  const _FuelMonitorCard({required this.truck, required this.statusColor, this.driverName = '—'});
 
   @override
   Widget build(BuildContext context) {
@@ -781,7 +1006,7 @@ class _FuelMonitorCard extends StatelessWidget {
                           Text(truck.name, style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           )),
-                          Text('${truck.plateNumber} · ${truck.driver ?? '—'}',
+                          Text('${truck.plateNumber} · $driverName',
                               style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
                         ],
                       ),
@@ -1017,18 +1242,375 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
+class _DeliveryStop {
+  final LatLng position;
+  final String name;
+  final String product;
+  final int quantity;
+  final String unit;
+
+  const _DeliveryStop({
+    required this.position,
+    required this.name,
+    this.product = '',
+    this.quantity = 0,
+    this.unit = 'liters',
+  });
+}
+
+class _DeliveryTrackerPanel extends StatelessWidget {
+  final FleetTruck truck;
+  final List<_DeliveryStop> stops;
+  final List<LatLng>? routePoints;
+  final bool isLoadingRoute;
+  final VoidCallback onShowAll;
+
+  const _DeliveryTrackerPanel({
+    required this.truck,
+    required this.stops,
+    this.routePoints,
+    this.isLoadingRoute = false,
+    required this.onShowAll,
+  });
+
+  Color _statusColor(TruckStatus s) => switch (s) {
+    TruckStatus.moving => AppTheme.successGreen,
+    TruckStatus.idle => AppTheme.warningAmber,
+    TruckStatus.maintenance => AppTheme.dangerRed,
+    TruckStatus.offDuty => AppTheme.neutralGray500,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final statusColor = _statusColor(truck.status);
+    final fuelPct = (truck.fuelLevel ?? 0) * 100;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(FleetRadius.lg),
+        border: Border.all(color: scheme.outline),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(FleetSpacing.sm, FleetSpacing.lg, FleetSpacing.sm, FleetSpacing.lg),
+            child: Row(
+              children: [
+                InkWell(
+                  onTap: onShowAll,
+                  borderRadius: BorderRadius.circular(FleetRadius.sm),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(Icons.arrow_back, size: 18, color: scheme.primary),
+                  ),
+                ),
+                const SizedBox(width: FleetSpacing.sm),
+                Expanded(
+                  child: Text(truck.name, style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  )),
+                ),
+                if (isLoadingRoute)
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: scheme.primary),
+                  )
+                else if (routePoints != null)
+                  Icon(Icons.route, size: 18, color: AppTheme.successGreen),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(FleetSpacing.lg),
+              children: [
+                Text('Truck Details', style: theme.textTheme.titleSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                )),
+                const SizedBox(height: FleetSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.all(FleetSpacing.md),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(FleetRadius.sm),
+                  ),
+                  child: Column(
+                    children: [
+                      _DetailRow(label: 'Plate Number', value: truck.plateNumber),
+                      const SizedBox(height: FleetSpacing.sm),
+                      _DetailRow(label: 'Speed', value: truck.speed != null ? '${truck.speed} km/h' : '—'),
+                      if (truck.fuelLevel != null) ...[
+                        const SizedBox(height: FleetSpacing.sm),
+                        Row(
+                          children: [
+                            Text('Fuel', style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                            const Spacer(),
+                            SizedBox(
+                              width: 80,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: LinearProgressIndicator(
+                                  value: truck.fuelLevel,
+                                  minHeight: 6,
+                                  backgroundColor: scheme.surfaceContainerHighest,
+                                  valueColor: AlwaysStoppedAnimation(
+                                    fuelPct > 50 ? AppTheme.successGreen : fuelPct > 25 ? AppTheme.warningAmber : AppTheme.dangerRed,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: FleetSpacing.sm),
+                            Text('${fuelPct.round()}%', style: theme.textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: fuelPct > 50 ? AppTheme.successGreen : fuelPct > 25 ? AppTheme.warningAmber : AppTheme.dangerRed,
+                            )),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: FleetSpacing.sm),
+                      Row(
+                        children: [
+                          Text('Status', style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: FleetSpacing.sm, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(FleetRadius.sm),
+                            ),
+                            child: Text(
+                              truck.status.name.replaceAllMapped(RegExp(r'[A-Z]'), (m) => ' ${m.group(0)}').trim(),
+                              style: theme.textTheme.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: FleetSpacing.lg),
+                Row(
+                  children: [
+                    Text('Deliveries (${stops.length})', style: theme.textTheme.titleSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    )),
+                    const Spacer(),
+                    if (routePoints != null)
+                      Text('Route loaded', style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppTheme.successGreen,
+                      )),
+                  ],
+                ),
+                const SizedBox(height: FleetSpacing.sm),
+                if (isLoadingRoute)
+                  SizedBox(
+                    height: 100,
+                    child: Center(child: LoadingAnimationWidget.staggeredDotsWave(color: scheme.primary, size: 30)),
+                  )
+                else if (stops.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(FleetSpacing.lg),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(FleetRadius.sm),
+                    ),
+                    child: Center(
+                      child: Text('No deliveries assigned.',
+                          style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                    ),
+                  )
+                else
+                  ...stops.asMap().entries.map((e) {
+                    final i = e.key;
+                    final stop = e.value;
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: i < stops.length - 1 ? FleetSpacing.sm : 0),
+                      child: Container(
+                        padding: const EdgeInsets.all(FleetSpacing.md),
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(FleetRadius.sm),
+                          border: i == 0 ? Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.3)) : null,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: i == 0
+                                    ? AppTheme.accentBlue
+                                    : AppTheme.accentBlue.withValues(alpha: 0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text('${i + 1}', style: theme.textTheme.labelSmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: i == 0 ? Colors.white : AppTheme.accentBlue,
+                                )),
+                              ),
+                            ),
+                            const SizedBox(width: FleetSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(stop.name, style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  )),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    '${stop.product} · ${stop.quantity} ${stop.unit}',
+                                    style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.local_gas_station_rounded, size: 16, color: AppTheme.accentBlue),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TruckList extends StatelessWidget {
+  final List<FleetTruck> trucks;
+  final String Function(int?) driverName;
+  final Color Function(TruckStatus) truckStatusColor;
+  final void Function(FleetTruck) onSelect;
+
+  const _TruckList({
+    required this.trucks,
+    required this.driverName,
+    required this.truckStatusColor,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(FleetRadius.lg),
+        border: Border.all(color: scheme.outline),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(FleetSpacing.lg, FleetSpacing.lg, FleetSpacing.lg, FleetSpacing.sm),
+            child: Row(
+              children: [
+                Text('Trucks', style: theme.textTheme.titleMedium),
+                const Spacer(),
+                Text('${trucks.length}', style: theme.textTheme.labelLarge?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                )),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: trucks.isEmpty
+                ? Center(
+                    child: Text('No trucks assigned.',
+                        style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: FleetSpacing.sm),
+                    itemCount: trucks.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1, indent: 56),
+                    itemBuilder: (context, index) {
+                      final truck = trucks[index];
+                      final color = truckStatusColor(truck.status);
+                      return InkWell(
+                        onTap: () => onSelect(truck),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: FleetSpacing.lg, vertical: FleetSpacing.sm),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(FleetRadius.sm),
+                                ),
+                                child: Icon(Icons.local_shipping_rounded, size: 18, color: color),
+                              ),
+                              const SizedBox(width: FleetSpacing.md),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(truck.name, style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    )),
+                                    const SizedBox(height: 1),
+                                    Text(
+                                      '${truck.plateNumber} · ${driverName(truck.driverId)}',
+                                      style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(FleetRadius.pill),
+                                ),
+                                child: Text(
+                                  truck.status.name.replaceAllMapped(RegExp(r'[A-Z]'), (m) => ' ${m.group(0)}').trim(),
+                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: color),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DetailPanel extends StatelessWidget {
   final Object? item;
   final Color Function(TruckStatus) truckStatusColor;
   final void Function({FleetTruck? truck}) onNotifyDriver;
   final VoidCallback onDismiss;
+  final String Function(int?) driverName;
+  final VoidCallback? onShowAll;
 
   const _DetailPanel({
     required this.item,
     required this.truckStatusColor,
     required this.onNotifyDriver,
     required this.onDismiss,
-  });
+    required this.driverName,
+    this.onShowAll,
+  }) : assert(item == null || item is FleetTruck || item is FleetStation);
 
   @override
   Widget build(BuildContext context) {
@@ -1056,6 +1638,7 @@ class _DetailPanel extends StatelessWidget {
                         truck: item as FleetTruck,
                         truckStatusColor: truckStatusColor,
                         onNotifyDriver: onNotifyDriver,
+                        driverName: driverName((item as FleetTruck).driverId),
                       )
                     : _StationDetail(station: item as FleetStation),
           ),
@@ -1075,6 +1658,17 @@ class _DetailPanel extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(FleetSpacing.lg, FleetSpacing.lg, FleetSpacing.sm, FleetSpacing.lg),
       child: Row(
         children: [
+          if (onShowAll != null) ...[
+            InkWell(
+              onTap: onShowAll,
+              borderRadius: BorderRadius.circular(FleetRadius.sm),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(Icons.arrow_back, size: 18, color: scheme.primary),
+              ),
+            ),
+            const SizedBox(width: FleetSpacing.sm),
+          ],
           Expanded(
             child: Text(title, style: theme.textTheme.titleMedium, overflow: TextOverflow.ellipsis),
           ),
@@ -1128,11 +1722,13 @@ class _TruckDetail extends StatelessWidget {
   final FleetTruck truck;
   final Color Function(TruckStatus) truckStatusColor;
   final void Function({FleetTruck? truck}) onNotifyDriver;
+  final String driverName;
 
   const _TruckDetail({
     required this.truck,
     required this.truckStatusColor,
     required this.onNotifyDriver,
+    this.driverName = '—',
   });
 
   @override
@@ -1149,7 +1745,7 @@ class _TruckDetail extends StatelessWidget {
         children: [
           _DetailRow(label: 'Plate Number', value: truck.plateNumber),
           const SizedBox(height: FleetSpacing.md),
-          _DetailRow(label: 'Driver', value: truck.driver ?? '—'),
+          _DetailRow(label: 'Driver', value: driverName),
           const SizedBox(height: FleetSpacing.md),
           _DetailRow(label: 'Speed', value: truck.speed != null ? '${truck.speed} km/h' : '—'),
           const SizedBox(height: FleetSpacing.md),

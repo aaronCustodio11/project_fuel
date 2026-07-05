@@ -1,5 +1,7 @@
 import 'package:chartify/chartify.dart';
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 
 enum TheftAlertType { fuelTheft, unauthorizedAccess, gpsTampering, routeDeviation }
@@ -44,68 +46,109 @@ class SupplierTheftDetection extends StatefulWidget {
 }
 
 class _SupplierTheftDetectionState extends State<SupplierTheftDetection> {
-  final _alerts = [
-    TheftAlert(
-      id: 'THF-001', vehicleName: 'Truck #FL-2042', plateNumber: 'ABC-1234',
-      type: TheftAlertType.fuelTheft, severity: TheftAlertSeverity.critical,
-      status: TheftAlertStatus.newAlert,
-      timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-      location: 'Main Depot, Manila',
-      description: 'Unexpected 30L fuel level drop detected while vehicle was parked overnight.',
-    ),
-    TheftAlert(
-      id: 'THF-002', vehicleName: 'Truck #FL-1078', plateNumber: 'XYZ-5678',
-      type: TheftAlertType.gpsTampering, severity: TheftAlertSeverity.critical,
-      status: TheftAlertStatus.newAlert,
-      timestamp: DateTime.now().subtract(const Duration(hours: 4)),
-      location: 'North Warehouse, Quezon City',
-      description: 'GPS signal lost for 4+ hours. Last known location near North Warehouse.',
-    ),
-    TheftAlert(
-      id: 'THF-003', vehicleName: 'Truck #FL-3091', plateNumber: 'DEF-9012',
-      type: TheftAlertType.routeDeviation, severity: TheftAlertSeverity.high,
-      status: TheftAlertStatus.investigating,
-      timestamp: DateTime.now().subtract(const Duration(hours: 6)),
-      location: 'South Expressway, Makati',
-      description: 'Vehicle deviated 15km from assigned route. Unauthorized stop detected.',
-    ),
-    TheftAlert(
-      id: 'THF-004', vehicleName: 'Truck #FL-4523', plateNumber: 'GHI-3456',
-      type: TheftAlertType.unauthorizedAccess, severity: TheftAlertSeverity.high,
-      status: TheftAlertStatus.newAlert,
-      timestamp: DateTime.now().subtract(const Duration(hours: 8)),
-      location: 'East Logistics Hub, Pasig',
-      description: 'After-hours fuel refuel detected at Station #ST-005 without work order.',
-    ),
-    TheftAlert(
-      id: 'THF-005', vehicleName: 'Truck #FL-1567', plateNumber: 'JKL-7890',
-      type: TheftAlertType.fuelTheft, severity: TheftAlertSeverity.medium,
-      status: TheftAlertStatus.investigating,
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-      location: 'South Gas Station, Makati',
-      description: 'Fuel card used twice within 5 minutes at same pump. Possible skimming.',
-    ),
-    TheftAlert(
-      id: 'THF-006', vehicleName: 'Truck #FL-2042', plateNumber: 'ABC-1234',
-      type: TheftAlertType.gpsTampering, severity: TheftAlertSeverity.low,
-      status: TheftAlertStatus.resolved,
-      timestamp: DateTime.now().subtract(const Duration(days: 3)),
-      location: 'Main Depot, Manila',
-      description: 'GPS signal interference detected. Resolved — faulty sensor replaced.',
-      resolvedBy: 'Mike Rodriguez',
-      resolvedAt: DateTime.now().subtract(const Duration(days: 2)),
-    ),
-    TheftAlert(
-      id: 'THF-007', vehicleName: 'Truck #FL-1078', plateNumber: 'XYZ-5678',
-      type: TheftAlertType.unauthorizedAccess, severity: TheftAlertSeverity.medium,
-      status: TheftAlertStatus.dismissed,
-      timestamp: DateTime.now().subtract(const Duration(days: 5)),
-      location: 'North Warehouse, Quezon City',
-      description: 'Door sensor triggered outside operating hours. False alarm — maintenance crew.',
-      resolvedBy: 'Sarah Chen',
-      resolvedAt: DateTime.now().subtract(const Duration(days: 4)),
-    ),
-  ];
+  List<TheftAlert> _alerts = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAlerts();
+  }
+
+  Future<void> _loadAlerts() async {
+    final results = await Future.wait([
+      JsonReaderService.readListStatic('assets/mock_data/theft_alerts.json'),
+      JsonReaderService.readListStatic('assets/mock_data/vehicles.json'),
+      JsonReaderService.readListStatic('assets/mock_data/authentication.json'),
+    ]);
+
+    final rawAlerts = results[0];
+    final vehicles = results[1];
+    final users = results[2];
+
+    final vehicleMap = <String, Map<String, dynamic>>{};
+    for (final v in vehicles) {
+      final vm = v as Map<String, dynamic>;
+      vehicleMap[vm['truckId'] as String? ?? ''] = vm;
+    }
+
+    final userNameMap = <int, String>{};
+    for (final u in users) {
+      final id = u['userId'] as int?;
+      if (id != null) {
+        userNameMap[id] = '${u['firstName'] ?? ''} ${u['surName'] ?? ''}'.trim();
+      }
+    }
+
+    final alerts = rawAlerts.whereType<Map<String, dynamic>>().map((a) {
+      final vehicleId = a['vehicleId'] as String? ?? '';
+      final vehicle = vehicleMap[vehicleId];
+      final severityStr = a['severity'] as String? ?? 'medium';
+      final typeStr = a['type'] as String? ?? 'fuelTheft';
+      final isResolved = a['isResolved'] as bool? ?? false;
+
+      TheftAlertSeverity severity;
+      switch (severityStr) {
+        case 'critical':
+          severity = TheftAlertSeverity.critical;
+        case 'high':
+          severity = TheftAlertSeverity.high;
+        case 'medium':
+          severity = TheftAlertSeverity.medium;
+        default:
+          severity = TheftAlertSeverity.low;
+      }
+
+      TheftAlertType type;
+      switch (typeStr) {
+        case 'fuelTheft':
+          type = TheftAlertType.fuelTheft;
+        case 'unauthorizedAccess':
+          type = TheftAlertType.unauthorizedAccess;
+        case 'gpsTampering':
+          type = TheftAlertType.gpsTampering;
+        default:
+          type = TheftAlertType.routeDeviation;
+      }
+
+      TheftAlertStatus status;
+      if (isResolved) {
+        if (a['resolvedBy'] != null) {
+          status = TheftAlertStatus.resolved;
+        } else {
+          status = TheftAlertStatus.dismissed;
+        }
+      } else {
+        status = TheftAlertStatus.newAlert;
+      }
+
+      final resolvedById = a['resolvedBy'] as int?;
+      return TheftAlert(
+        id: a['id'] as String? ?? '',
+        vehicleName: vehicle?['truckId'] != null
+            ? 'Truck #${vehicle!['truckId']}'
+            : vehicleId,
+        plateNumber: vehicle?['plateNumber'] as String? ?? '',
+        type: type,
+        severity: severity,
+        status: status,
+        timestamp: DateTime.parse(a['timestamp'] as String),
+        location: '${a['location']?['lat'] ?? ''}, ${a['location']?['lng'] ?? ''}',
+        description: a['description'] as String? ?? '',
+        resolvedBy: resolvedById != null ? userNameMap[resolvedById] : null,
+        resolvedAt: a['resolvedAt'] != null
+            ? DateTime.tryParse(a['resolvedAt'] as String)
+            : null,
+      );
+    }).toList();
+
+    if (mounted) {
+      setState(() {
+        _alerts = alerts;
+        _isLoading = false;
+      });
+    }
+  }
 
   String _typeLabel(TheftAlertType t) => switch (t) {
     TheftAlertType.fuelTheft => 'Fuel Theft',
@@ -156,7 +199,9 @@ class _SupplierTheftDetectionState extends State<SupplierTheftDetection> {
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLow,
       body: SafeArea(
-        child: _buildContent(context),
+        child: _isLoading
+            ? Center(child: LoadingAnimationWidget.staggeredDotsWave(color: scheme.primary, size: 50))
+            : _buildContent(context),
       ),
     );
   }
