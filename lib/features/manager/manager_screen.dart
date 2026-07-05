@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project_fuel/features/manager/pages/dashboard_page.dart';
 import 'package:project_fuel/features/manager/pages/fuel_monitoring_page.dart';
 import 'package:project_fuel/features/manager/pages/theft_detection_page.dart';
+import 'package:project_fuel/features/profile/pages/profile_page.dart';
 import 'package:project_fuel/shared/widgets/sidebar.dart';
 import 'package:project_fuel/shared/widgets/introductory.dart';
 import 'package:sidebarx/sidebarx.dart';
@@ -16,10 +17,11 @@ class ManagerScreen extends StatefulWidget {
 class _ManagerScreenState extends State<ManagerScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = const [
+  late final List<Widget> _pages = const [
     ManagerDashboard(),
     ManagerFuelMonitoring(),
     ManagerTheftDetection(),
+    ProfileView(),
   ];
 
   @override
@@ -44,6 +46,8 @@ class _ManagerScreenState extends State<ManagerScreen> {
           Sidebar(
             initialIndex: _selectedIndex,
             onItemSelected: (i) => setState(() => _selectedIndex = i),
+            onAccountTap: () => setState(() => _selectedIndex = _pages.length - 1),
+            isAccountSelected: _selectedIndex == _pages.length - 1,
             items: _sidebarItems,
           ),
           Expanded(

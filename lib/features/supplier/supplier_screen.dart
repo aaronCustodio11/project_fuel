@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project_fuel/features/profile/pages/profile_page.dart';
 import 'package:project_fuel/features/supplier/pages/dashboard_page.dart';
 import 'package:project_fuel/features/supplier/pages/fleet_tracking_page.dart';
 import 'package:project_fuel/features/supplier/pages/maintenance_page.dart';
@@ -32,6 +33,7 @@ class _SupplierScreenState extends State<SupplierScreen> {
     const SupplierMaintenance(),
     const SupplierFleetTracking(),
     const SupplierTheftDetection(),
+    const ProfileView(),
   ];
 
   void _onNavigate(int index) => setState(() => _selectedIndex = index);
@@ -52,6 +54,8 @@ class _SupplierScreenState extends State<SupplierScreen> {
           Sidebar(
             initialIndex: _selectedIndex,
             onItemSelected: (i) => setState(() => _selectedIndex = i),
+            onAccountTap: () => setState(() => _selectedIndex = _pages.length - 1),
+            isAccountSelected: _selectedIndex == _pages.length - 1,
             items: _sidebarItems,
           ),
           Expanded(

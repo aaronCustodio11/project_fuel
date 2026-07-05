@@ -230,6 +230,12 @@ class ThemeProvider extends InheritedNotifier<ValueNotifier<ThemeMode>> {
     final notifier = provider!.notifier!;
     notifier.value = notifier.value == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
   }
+
+  static void setThemeMode(BuildContext context, ThemeMode mode) {
+    final provider = context.dependOnInheritedWidgetOfExactType<ThemeProvider>();
+    assert(provider != null, 'No ThemeProvider found in context');
+    provider!.notifier!.value = mode;
+  }
 }
 
 class FleetStatusColors extends ThemeExtension<FleetStatusColors> {

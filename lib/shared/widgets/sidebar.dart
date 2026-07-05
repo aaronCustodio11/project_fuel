@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:project_fuel/core/routes/app_routes.dart';
-import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
-import 'package:project_fuel/shared/widgets/logout_dialog.dart';
 import 'package:sidebarx/sidebarx.dart';
 
 class Sidebar extends StatefulWidget {
-  const Sidebar({super.key, this.onItemSelected, this.initialIndex = 0, required this.items});
+  const Sidebar({
+    super.key,
+    this.onItemSelected,
+    this.onAccountTap,
+    this.isAccountSelected = false,
+    this.initialIndex = 0,
+    required this.items,
+  });
 
   final ValueChanged<int>? onItemSelected;
+  final VoidCallback? onAccountTap;
+  final bool isAccountSelected;
   final int initialIndex;
   final List<SidebarXItem> items;
 
@@ -29,7 +36,10 @@ class _SidebarState extends State<Sidebar> {
   void initState() {
     super.initState();
     _lastIndex = widget.initialIndex;
-    _controller = SidebarXController(selectedIndex: widget.initialIndex, extended: _isExtended);
+    _controller = SidebarXController(
+      selectedIndex: widget.initialIndex,
+      extended: _isExtended,
+    );
     _controller.addListener(_onChanged);
   }
 
@@ -82,7 +92,11 @@ class _SidebarState extends State<Sidebar> {
       ),
       hoverColor: scheme.surfaceContainerHighest,
       textStyle: TextStyle(color: fg, fontSize: 14),
-      selectedTextStyle: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 14),
+      selectedTextStyle: TextStyle(
+        color: fg,
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+      ),
       hoverTextStyle: TextStyle(color: fg, fontSize: 14),
       itemTextPadding: const EdgeInsets.only(left: FleetSpacing.md),
       selectedItemTextPadding: const EdgeInsets.only(left: FleetSpacing.md),
@@ -125,7 +139,8 @@ class _SidebarState extends State<Sidebar> {
         theme: _cachedTheme,
         extendedTheme: const SidebarXTheme(width: 240),
         headerBuilder: _buildHeader,
-        footerBuilder: (context, extended) => _buildFooter(context, extended, fg),
+        footerBuilder: (context, extended) =>
+            _buildFooter(context, extended, fg),
         items: widget.items,
       ),
     );
@@ -143,7 +158,11 @@ class _SidebarState extends State<Sidebar> {
             const CircleAvatar(
               radius: 18,
               backgroundColor: AppTheme.successGreen,
-              child: Icon(Icons.local_shipping_outlined, color: Colors.white, size: 18),
+              child: Icon(
+                Icons.local_shipping_outlined,
+                color: Colors.white,
+                size: 18,
+              ),
             ),
             if (extended) ...[
               const SizedBox(height: FleetSpacing.xs),
@@ -163,12 +182,8 @@ class _SidebarState extends State<Sidebar> {
   }
 
   Widget _buildFooter(BuildContext context, bool extended, Color fg) {
-    final themeMode = ThemeProvider.read(context);
-    final isLight = themeMode == ThemeMode.light ||
-        (themeMode == ThemeMode.system && _lastBrightness == Brightness.light);
-    final themeIcon = isLight ? Icons.dark_mode_outlined : Icons.light_mode_outlined;
-    final themeLabel = isLight ? 'Dark' : 'Light';
     final scheme = Theme.of(context).colorScheme;
+    final isSelected = widget.isAccountSelected;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -182,58 +197,11 @@ class _SidebarState extends State<Sidebar> {
         children: [
           Divider(height: 1, color: scheme.outlineVariant),
           SizedBox(height: extended ? FleetSpacing.sm : FleetSpacing.xs),
-
-          _FooterButton(
+          _AccountButton(
             extended: extended,
-            icon: themeIcon,
-            label: themeLabel,
-            onTap: () => ThemeProvider.toggle(context),
-            extendedBuilder: () => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(themeIcon, color: fg, size: 16),
-                const SizedBox(width: FleetSpacing.sm),
-                Text(
-                  themeLabel,
-                  style: TextStyle(color: fg, fontSize: 13, fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-            collapsedBuilder: () => Icon(themeIcon, color: fg, size: 18),
-          ),
-
-          SizedBox(height: extended ? FleetSpacing.xs : 2),
-
-          _FooterButton(
-            extended: extended,
-            icon: Icons.logout,
-            label: 'Logout',
-            onTap: () async {
-              final confirmed = await showLogoutConfirmationDialog(context);
-              if (confirmed && context.mounted) {
-                await AuthenticationService().logout();
-                if (context.mounted) {
-                  Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
-                }
-              }
-            },
-            isDestructive: true,
-            extendedBuilder: () => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.logout, color: AppTheme.dangerRed, size: 16),
-                const SizedBox(width: FleetSpacing.sm),
-                Text(
-                  'Logout',
-                  style: TextStyle(
-                    color: AppTheme.dangerRed,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            collapsedBuilder: () => Icon(Icons.logout, color: AppTheme.dangerRed, size: 18),
+            isSelected: isSelected,
+            onTap: widget.onAccountTap ??
+                () => Navigator.of(context).pushNamed(AppRoutes.profile),
           ),
         ],
       ),
@@ -241,41 +209,39 @@ class _SidebarState extends State<Sidebar> {
   }
 }
 
-class _FooterButton extends StatefulWidget {
+class _AccountButton extends StatefulWidget {
   final bool extended;
-  final IconData icon;
-  final String label;
+  final bool isSelected;
   final VoidCallback onTap;
-  final Widget Function() extendedBuilder;
-  final Widget Function() collapsedBuilder;
-  final bool isDestructive;
 
-  const _FooterButton({
+  const _AccountButton({
     required this.extended,
-    required this.icon,
-    required this.label,
+    required this.isSelected,
     required this.onTap,
-    required this.extendedBuilder,
-    required this.collapsedBuilder,
-    this.isDestructive = false,
   });
 
   @override
-  State<_FooterButton> createState() => _FooterButtonState();
+  State<_AccountButton> createState() => _AccountButtonState();
 }
 
-class _FooterButtonState extends State<_FooterButton> {
+class _AccountButtonState extends State<_AccountButton> {
   bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final bg = widget.isDestructive
-        ? AppTheme.dangerRed.withValues(alpha: _isHovered ? 0.12 : 0.0)
-        : scheme.surfaceContainerHighest.withValues(alpha: _isHovered ? 0.5 : 0.0);
+    final isDark = scheme.brightness == Brightness.dark;
+    final fg = isDark ? Colors.white : Colors.black;
+
+    final showHighlight = widget.isSelected || _isHovered;
+    final bg = showHighlight ? scheme.surfaceContainerHighest : Colors.transparent;
+    final iconColor = widget.isSelected
+        ? AppTheme.successGreen
+        : fg.withValues(alpha: 0.7);
+    final textWeight = widget.isSelected ? FontWeight.w600 : FontWeight.w400;
 
     return Tooltip(
-      message: widget.label,
+      message: 'Account',
       waitDuration: const Duration(milliseconds: 300),
       child: MouseRegion(
         onEnter: (_) => setState(() => _isHovered = true),
@@ -285,19 +251,37 @@ class _FooterButtonState extends State<_FooterButton> {
           borderRadius: BorderRadius.circular(FleetRadius.sm),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            padding: EdgeInsets.symmetric(
-              horizontal: widget.extended ? FleetSpacing.md : FleetSpacing.sm,
+            margin: const EdgeInsets.symmetric(
+              horizontal: 0,
+              vertical: FleetSpacing.xs,
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FleetSpacing.md,
               vertical: FleetSpacing.sm,
             ),
             decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.circular(FleetRadius.sm),
             ),
-            child: widget.extended ? widget.extendedBuilder() : widget.collapsedBuilder(),
+            child: widget.extended
+                ? Row(
+                    children: [
+                      Icon(Icons.person_outline, color: iconColor, size: 20),
+                      const SizedBox(width: FleetSpacing.md),
+                      Text(
+                        'Account',
+                        style: TextStyle(
+                          color: fg,
+                          fontSize: 14,
+                          fontWeight: textWeight,
+                        ),
+                      ),
+                    ],
+                  )
+                : Icon(Icons.person_outline, color: iconColor, size: 20),
           ),
         ),
       ),
     );
   }
 }
-
