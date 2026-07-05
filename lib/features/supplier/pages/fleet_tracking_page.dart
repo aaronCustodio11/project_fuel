@@ -1,8 +1,11 @@
 import 'package:chartify/chartify.dart';
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:project_fuel/core/models/fleet_tracking.dart';
+import 'package:project_fuel/core/services/authentication.dart';
+import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:project_fuel/shared/widgets/role_badge.dart';
 
@@ -15,66 +18,74 @@ class SupplierFleetTracking extends StatefulWidget {
 
 class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
   final _mapController = MapController();
+  final _authService = AuthenticationService();
 
   Object? _selectedItem;
 
-  final _trucks = [
-    FleetTruck(
-      id: 'TRK-001', name: 'Truck #FL-2042', plateNumber: 'ABC-1234',
-      position: const LatLng(14.5995, 120.9842),
-      status: TruckStatus.moving, driver: 'Juan Dela Cruz',
-      speed: 65, fuelLevel: 0.72, lastUpdate: '2 min ago',
-    ),
-    FleetTruck(
-      id: 'TRK-002', name: 'Truck #FL-1078', plateNumber: 'XYZ-5678',
-      position: const LatLng(14.6150, 120.9750),
-      status: TruckStatus.moving, driver: 'Maria Santos',
-      speed: 48, fuelLevel: 0.55, lastUpdate: '5 min ago',
-    ),
-    FleetTruck(
-      id: 'TRK-003', name: 'Truck #FL-3091', plateNumber: 'DEF-9012',
-      position: const LatLng(14.5800, 120.9950),
-      status: TruckStatus.idle, driver: 'Pedro Reyes',
-      speed: 0, fuelLevel: 0.88, lastUpdate: '12 min ago',
-    ),
-    FleetTruck(
-      id: 'TRK-004', name: 'Truck #FL-4523', plateNumber: 'GHI-3456',
-      position: const LatLng(14.6100, 120.9600),
-      status: TruckStatus.maintenance, driver: 'Ana Cruz',
-      speed: 0, fuelLevel: 0.30, lastUpdate: '1 hour ago',
-    ),
-    FleetTruck(
-      id: 'TRK-005', name: 'Truck #FL-1567', plateNumber: 'JKL-7890',
-      position: const LatLng(14.5900, 120.9700),
-      status: TruckStatus.offDuty, driver: 'Jose Garcia',
-      speed: 0, fuelLevel: 0.45, lastUpdate: '3 hours ago',
-    ),
-  ];
+  List<FleetTruck> _trucks = [];
+  List<FleetStation> _stations = [];
+  List<Map<String, dynamic>> _authUsers = [];
+  bool _isLoading = true;
+  LatLng? _userPosition;
+  bool _followUser = true;
 
-  final _stations = [
-    FleetStation(
-      id: 'STN-001', name: 'Main Depot Station',
-      position: const LatLng(14.6050, 120.9900),
-      type: StationType.gasStation, address: '123 Main St, Manila',
-      fuelLevel: 0.85,
-    ),
-    FleetStation(
-      id: 'STN-002', name: 'North Warehouse',
-      position: const LatLng(14.6250, 120.9650),
-      type: StationType.warehouse, address: '456 North Ave, Quezon City',
-    ),
-    FleetStation(
-      id: 'STN-003', name: 'South Gas Station',
-      position: const LatLng(14.5700, 120.9850),
-      type: StationType.gasStation, address: '789 South Rd, Makati',
-      fuelLevel: 0.40,
-    ),
-    FleetStation(
-      id: 'STN-004', name: 'East Logistics Hub',
-      position: const LatLng(14.5950, 121.0050),
-      type: StationType.warehouse, address: '321 East Ave, Pasig',
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final results = await Future.wait([
+      JsonReaderService.readListStatic('assets/mock_data/vehicles.json'),
+      JsonReaderService.readListStatic('assets/mock_data/stations.json'),
+      JsonReaderService.readListStatic('assets/mock_data/authentication.json'),
+      _authService.getSavedUser(),
+    ]);
+
+    final vehicles = results[0] as List<dynamic>;
+    final stations = results[1] as List<dynamic>;
+    final users = results[2] as List<dynamic>;
+    final user = results[3] as AuthUser?;
+
+    if (mounted) {
+      setState(() {
+        _trucks = vehicles
+            .whereType<Map<String, dynamic>>()
+            .map((v) => FleetTruck.fromVehicleJson(v))
+            .toList();
+        _stations = stations
+            .whereType<Map<String, dynamic>>()
+            .map((s) => FleetStation.fromJson(s))
+            .toList();
+        _authUsers = users.cast<Map<String, dynamic>>();
+        _userPosition = (user?.latitude != null && user?.longitude != null)
+            ? LatLng(user!.latitude!, user.longitude!)
+            : null;
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _driverName(int? id) {
+    if (id == null) return '—';
+    for (final u in _authUsers) {
+      if (u['userId'] == id) return '${u['firstName'] ?? ''} ${u['surName'] ?? ''}'.trim();
+    }
+    return '—';
+  }
+
+  void _onMapEvent(MapEvent event) {
+    if ((event is MapEventMoveEnd || event is MapEventFlingAnimationEnd) && _followUser) {
+      setState(() => _followUser = false);
+    }
+  }
+
+  void _centerOnUser() {
+    if (_userPosition == null) return;
+    _mapController.move(_userPosition!, _mapController.camera.zoom);
+    setState(() => _followUser = true);
+  }
 
   Color _truckStatusColor(TruckStatus s) => switch (s) {
     TruckStatus.moving => AppTheme.successGreen,
@@ -90,7 +101,9 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLow,
       body: SafeArea(
-        child: _buildContent(context),
+        child: _isLoading
+            ? Center(child: LoadingAnimationWidget.staggeredDotsWave(color: scheme.primary, size: 50))
+            : _buildContent(context),
       ),
     );
   }
@@ -178,28 +191,73 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
               child: Row(
                 children: [
                   Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(FleetRadius.lg),
-                      child: FlutterMap(
-                        mapController: _mapController,
-                        options: const MapOptions(
-                          initialCenter: LatLng(14.5995, 120.9842),
-                          initialZoom: 13,
-                          interactionOptions: InteractionOptions(
-                            flags: InteractiveFlag.all,
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(FleetRadius.lg),
+                          child: FlutterMap(
+                            mapController: _mapController,
+                            options: MapOptions(
+                              initialCenter: const LatLng(13.76, 121.06),
+                              initialZoom: 13,
+                              interactionOptions: const InteractionOptions(
+                                flags: InteractiveFlag.all,
+                              ),
+                              onMapEvent: _onMapEvent,
+                            ),
+                            children: [
+                              TileLayer(
+                                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                userAgentPackageName: 'com.example.project_fuel',
+                              ),
+                              MarkerLayer(markers: [
+                                if (_userPosition != null)
+                                  Marker(
+                                    point: _userPosition!,
+                                    width: 40,
+                                    height: 40,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.primary,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: Colors.white, width: 3),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.3),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Icon(Icons.person, color: Colors.white, size: 20),
+                                    ),
+                                  ),
+                                ..._trucks.map(_buildTruckMarker),
+                                ..._stations.map(_buildStationMarker),
+                              ]),
+                            ],
                           ),
                         ),
-                        children: [
-                          TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.example.project_fuel',
+                        if (_userPosition != null)
+                          Positioned(
+                            right: 12,
+                            bottom: 12,
+                            child: FloatingActionButton.small(
+                              heroTag: 'locate',
+                              onPressed: _centerOnUser,
+                              backgroundColor: _followUser
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.surface,
+                              tooltip: 'Center on my location',
+                              child: Icon(
+                                Icons.my_location_rounded,
+                                color: _followUser
+                                    ? Theme.of(context).colorScheme.onPrimary
+                                    : Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
                           ),
-                          MarkerLayer(markers: [
-                            ..._trucks.map(_buildTruckMarker),
-                            ..._stations.map(_buildStationMarker),
-                          ]),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: FleetSpacing.md),
@@ -210,6 +268,7 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
                       truckStatusColor: _truckStatusColor,
                       onNotifyDriver: _showNotifyTruckSheet,
                       onDismiss: () => setState(() => _selectedItem = null),
+                      driverName: _driverName,
                     ),
                   ),
                 ],
@@ -343,7 +402,7 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
                               FlutterMap(
                                 mapController: mapCtrl,
                                 options: MapOptions(
-                                  initialCenter: const LatLng(14.5995, 120.9842),
+                                  initialCenter: const LatLng(13.76, 121.06),
                                   initialZoom: 12,
                                   interactionOptions: const InteractionOptions(
                                     flags: InteractiveFlag.all,
@@ -724,6 +783,7 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
             child: _FuelMonitorCard(
               truck: truck,
               statusColor: _truckStatusColor(truck.status),
+              driverName: _driverName(truck.driverId),
             ),
           )),
         ],
@@ -735,8 +795,9 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
 class _FuelMonitorCard extends StatelessWidget {
   final FleetTruck truck;
   final Color statusColor;
+  final String driverName;
 
-  const _FuelMonitorCard({required this.truck, required this.statusColor});
+  const _FuelMonitorCard({required this.truck, required this.statusColor, this.driverName = '—'});
 
   @override
   Widget build(BuildContext context) {
@@ -781,7 +842,7 @@ class _FuelMonitorCard extends StatelessWidget {
                           Text(truck.name, style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           )),
-                          Text('${truck.plateNumber} · ${truck.driver ?? '—'}',
+                          Text('${truck.plateNumber} · $driverName',
                               style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
                         ],
                       ),
@@ -1022,13 +1083,15 @@ class _DetailPanel extends StatelessWidget {
   final Color Function(TruckStatus) truckStatusColor;
   final void Function({FleetTruck? truck}) onNotifyDriver;
   final VoidCallback onDismiss;
+  final String Function(int?) driverName;
 
   const _DetailPanel({
     required this.item,
     required this.truckStatusColor,
     required this.onNotifyDriver,
     required this.onDismiss,
-  });
+    required this.driverName,
+  }) : assert(item == null || item is FleetTruck || item is FleetStation);
 
   @override
   Widget build(BuildContext context) {
@@ -1056,6 +1119,7 @@ class _DetailPanel extends StatelessWidget {
                         truck: item as FleetTruck,
                         truckStatusColor: truckStatusColor,
                         onNotifyDriver: onNotifyDriver,
+                        driverName: driverName((item as FleetTruck).driverId),
                       )
                     : _StationDetail(station: item as FleetStation),
           ),
@@ -1128,11 +1192,13 @@ class _TruckDetail extends StatelessWidget {
   final FleetTruck truck;
   final Color Function(TruckStatus) truckStatusColor;
   final void Function({FleetTruck? truck}) onNotifyDriver;
+  final String driverName;
 
   const _TruckDetail({
     required this.truck,
     required this.truckStatusColor,
     required this.onNotifyDriver,
+    this.driverName = '—',
   });
 
   @override
@@ -1149,7 +1215,7 @@ class _TruckDetail extends StatelessWidget {
         children: [
           _DetailRow(label: 'Plate Number', value: truck.plateNumber),
           const SizedBox(height: FleetSpacing.md),
-          _DetailRow(label: 'Driver', value: truck.driver ?? '—'),
+          _DetailRow(label: 'Driver', value: driverName),
           const SizedBox(height: FleetSpacing.md),
           _DetailRow(label: 'Speed', value: truck.speed != null ? '${truck.speed} km/h' : '—'),
           const SizedBox(height: FleetSpacing.md),

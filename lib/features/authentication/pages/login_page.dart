@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 
 class LoginScreenPage extends StatefulWidget {
@@ -280,10 +281,13 @@ class _LoginScreenPageState extends State<LoginScreenPage> {
               child: FilledButton(
                 onPressed: _isLoading ? null : _login,
                 child: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: LoadingAnimationWidget.waveDots(
+                          color: theme.colorScheme.onPrimary,
+                          size: 20,
+                        ),
                       )
                     : const Text("Login"),
               ),

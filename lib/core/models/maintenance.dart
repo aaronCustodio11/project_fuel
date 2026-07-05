@@ -68,7 +68,7 @@ class MaintenanceRecord {
   final DateTime? completedDate;
   final double cost;
   final List<MaintenanceNote> notes;
-  final String? assignedTo;
+  final int? assignedToId;
   final DateTime createdAt;
 
   const MaintenanceRecord({
@@ -83,7 +83,7 @@ class MaintenanceRecord {
     this.completedDate,
     this.cost = 0,
     this.notes = const [],
-    this.assignedTo,
+    this.assignedToId,
     required this.createdAt,
   });
 
@@ -105,7 +105,7 @@ class MaintenanceRecord {
       completedDate: completedDate ?? this.completedDate,
       cost: cost ?? this.cost,
       notes: notes ?? this.notes,
-      assignedTo: assignedTo,
+      assignedToId: assignedToId,
       createdAt: createdAt,
     );
   }
@@ -130,7 +130,7 @@ class MaintenanceRecord {
               ?.map((e) => MaintenanceNote.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      assignedTo: json['assignedTo'] as String?,
+      assignedToId: json['assignedToId'] as int?,
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }

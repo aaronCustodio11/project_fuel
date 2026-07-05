@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:project_fuel/core/routes/app_routes.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
@@ -72,9 +73,9 @@ class _SplashScreenPageState extends State<SplashScreenPage> {
                 ),
               ),
               const SizedBox(height: FleetSpacing.xl),
-              CircularProgressIndicator(
+              LoadingAnimationWidget.staggeredDotsWave(
                 color: scheme.onPrimary,
-                strokeWidth: 3,
+                size: 50,
               ),
             ],
           ),

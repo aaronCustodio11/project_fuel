@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:project_fuel/core/models/maintenance.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/deliveries.dart';
+import 'package:project_fuel/core/services/maintenance_service.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 
 class VehicleMaintenancePage extends StatefulWidget {
@@ -16,17 +19,26 @@ class _VehicleMaintenancePageState extends State<VehicleMaintenancePage> {
 
   bool _isLoading = true;
   TruckModel? _truck;
+  List<MaintenanceRecord> _maintenanceRecords = [];
 
   @override
   void initState() {
     super.initState();
-    _loadTruck();
+    _loadData();
   }
 
-  Future<void> _loadTruck() async {
+  Future<void> _loadData() async {
     final user = await _authService.getSavedUser();
     if (user != null) {
-      _truck = await _deliveryService.getTruckForDriver(user.userId);
+      final results = await Future.wait([
+        _deliveryService.getTruckForDriver(user.userId),
+        MaintenanceService().getRecords(),
+      ]);
+      _truck = results[0] as TruckModel?;
+      final allRecords = results[1] as List<MaintenanceRecord>;
+      if (_truck != null) {
+        _maintenanceRecords = allRecords.where((r) => r.vehicleId == _truck!.truckId).toList();
+      }
     }
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -50,7 +62,7 @@ class _VehicleMaintenancePageState extends State<VehicleMaintenancePage> {
             const SizedBox(height: FleetSpacing.md),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(child: LoadingAnimationWidget.staggeredDotsWave(color: theme.colorScheme.primary, size: 50))
                   : _buildContent(theme),
             ),
           ],
@@ -60,6 +72,9 @@ class _VehicleMaintenancePageState extends State<VehicleMaintenancePage> {
   }
 
   Widget _buildContent(ThemeData theme) {
+    final scheduled = _maintenanceRecords.where((r) => r.status != MaintenanceStatus.completed).toList();
+    final history = _maintenanceRecords.where((r) => r.status == MaintenanceStatus.completed).toList();
+
     return ListView(
       padding: const EdgeInsets.all(FleetSpacing.lg),
       children: [
@@ -67,11 +82,27 @@ class _VehicleMaintenancePageState extends State<VehicleMaintenancePage> {
         const SizedBox(height: FleetSpacing.lg),
         _buildSectionTitle(theme, 'Scheduled Maintenance'),
         const SizedBox(height: FleetSpacing.sm),
-        ..._mockMaintenanceTasks.map((t) => _buildMaintenanceTile(theme, t)),
+        if (scheduled.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text('No scheduled maintenance', style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            )),
+          )
+        else
+          ...scheduled.map((r) => _buildMaintenanceTile(theme, r)),
         const SizedBox(height: FleetSpacing.lg),
         _buildSectionTitle(theme, 'Service History'),
         const SizedBox(height: FleetSpacing.sm),
-        ..._mockServiceHistory.map((s) => _buildHistoryTile(theme, s)),
+        if (history.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text('No service history', style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            )),
+          )
+        else
+          ...history.map((r) => _buildHistoryTile(theme, r)),
       ],
     );
   }
@@ -153,48 +184,51 @@ class _VehicleMaintenancePageState extends State<VehicleMaintenancePage> {
     );
   }
 
-  Widget _buildMaintenanceTile(ThemeData theme, _MaintenanceTask task) {
+  Widget _buildMaintenanceTile(ThemeData theme, MaintenanceRecord record) {
+    final isUrgent = record.priority == MaintenancePriority.critical || record.priority == MaintenancePriority.high;
     return Card(
       margin: const EdgeInsets.only(bottom: FleetSpacing.sm),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: task.urgent
+            color: isUrgent
                 ? theme.colorScheme.errorContainer
                 : theme.colorScheme.secondaryContainer,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
-            task.urgent ? Icons.warning_rounded : Icons.build_rounded,
-            color: task.urgent
+            isUrgent ? Icons.warning_rounded : Icons.build_rounded,
+            color: isUrgent
                 ? theme.colorScheme.error
                 : theme.colorScheme.secondary,
             size: 22,
           ),
         ),
         title: Text(
-          task.title,
+          record.type,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: Text(
-          task.dueDate,
+          record.scheduledDate != null
+              ? 'Due: ${record.scheduledDate!.toString().split(' ')[0]}'
+              : record.description,
           style: theme.textTheme.bodySmall,
         ),
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: task.urgent
+            color: isUrgent
                 ? theme.colorScheme.errorContainer
                 : theme.colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(FleetRadius.pill),
           ),
           child: Text(
-            task.status,
+            record.status.label,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: task.urgent
+              color: isUrgent
                   ? theme.colorScheme.error
                   : theme.colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w600,
@@ -205,7 +239,7 @@ class _VehicleMaintenancePageState extends State<VehicleMaintenancePage> {
     );
   }
 
-  Widget _buildHistoryTile(ThemeData theme, _ServiceRecord record) {
+  Widget _buildHistoryTile(ThemeData theme, MaintenanceRecord record) {
     return Card(
       margin: const EdgeInsets.only(bottom: FleetSpacing.sm),
       child: ListTile(
@@ -222,73 +256,18 @@ class _VehicleMaintenancePageState extends State<VehicleMaintenancePage> {
           ),
         ),
         title: Text(
-          record.service,
+          record.type,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: Text(
-          '${record.date} • ${record.odometer} km',
+          record.completedDate != null
+              ? '${record.completedDate!.toString().split(' ')[0]} • ${record.cost.toStringAsFixed(0)} PHP'
+              : record.description,
           style: theme.textTheme.bodySmall,
         ),
       ),
     );
   }
 }
-
-class _MaintenanceTask {
-  final String title;
-  final String dueDate;
-  final String status;
-  final bool urgent;
-
-  const _MaintenanceTask({
-    required this.title,
-    required this.dueDate,
-    required this.status,
-    this.urgent = false,
-  });
-}
-
-class _ServiceRecord {
-  final String service;
-  final String date;
-  final int odometer;
-
-  const _ServiceRecord({
-    required this.service,
-    required this.date,
-    required this.odometer,
-  });
-}
-
-const _mockMaintenanceTasks = [
-  _MaintenanceTask(
-    title: 'Oil Change',
-    dueDate: 'Due in 500 km',
-    status: 'Upcoming',
-  ),
-  _MaintenanceTask(
-    title: 'Tire Rotation',
-    dueDate: 'Due in 1,200 km',
-    status: 'Upcoming',
-  ),
-  _MaintenanceTask(
-    title: 'Brake Inspection',
-    dueDate: 'Overdue by 300 km',
-    status: 'Overdue',
-    urgent: true,
-  ),
-  _MaintenanceTask(
-    title: 'Engine Tune-up',
-    dueDate: 'Due in 3,000 km',
-    status: 'Scheduled',
-  ),
-];
-
-const _mockServiceHistory = [
-  _ServiceRecord(service: 'Oil Change', date: '2026-05-15', odometer: 45200),
-  _ServiceRecord(service: 'Air Filter Replacement', date: '2026-04-02', odometer: 44100),
-  _ServiceRecord(service: 'Tire Rotation', date: '2026-03-10', odometer: 43200),
-  _ServiceRecord(service: 'Brake Pad Replacement', date: '2026-01-22', odometer: 41500),
-];

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/deliveries.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
@@ -16,6 +17,7 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
 
   bool _isLoading = true;
   TruckModel? _truck;
+  List<DeliveryModel> _deliveries = [];
 
   @override
   void initState() {
@@ -26,7 +28,12 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
   Future<void> _loadData() async {
     final user = await _authService.getSavedUser();
     if (user != null) {
-      _truck = await _deliveryService.getTruckForDriver(user.userId);
+      final results = await Future.wait([
+        _deliveryService.getTruckForDriver(user.userId),
+        _deliveryService.getDeliveriesForDriver(user.userId),
+      ]);
+      _truck = results[0] as TruckModel?;
+      _deliveries = results[1] as List<DeliveryModel>;
     }
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -50,7 +57,7 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
             const SizedBox(height: FleetSpacing.md),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(child: LoadingAnimationWidget.staggeredDotsWave(color: theme.colorScheme.primary, size: 50))
                   : _buildContent(theme),
             ),
           ],
@@ -60,12 +67,12 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
   }
 
   Widget _buildContent(ThemeData theme) {
-    final deliveries = _truck?.deliveries ?? [];
+    final deliveries = _deliveries;
     final total = deliveries.length;
     final completed = deliveries.where((d) => d.status == 'Completed').length;
-    final enRoute = deliveries.where((d) => d.status == 'En Route').length;
-    final pending = deliveries.where((d) => d.status == 'Pending').length;
-    final totalLiters = deliveries.fold<int>(0, (sum, d) => sum + d.volumeLiters);
+    final enRoute = deliveries.where((d) => d.status == 'inProgress').length;
+    final pending = deliveries.where((d) => d.status == 'scheduled').length;
+    final totalLiters = deliveries.fold<int>(0, (sum, d) => sum + d.quantity);
 
     return ListView(
       padding: const EdgeInsets.all(FleetSpacing.lg),
@@ -247,14 +254,14 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    delivery.gasStation,
+                    delivery.stationName,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${delivery.fuelType} • ${delivery.volumeLiters} L',
+                    '${delivery.product} • ${delivery.quantity} L',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

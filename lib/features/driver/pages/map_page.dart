@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:project_fuel/core/services/authentication.dart';
@@ -85,11 +86,12 @@ class _DriverMapPageState extends State<DriverMapPage> {
         _driverPosition = LatLng(user.latitude!, user.longitude!);
       }
 
-      final truck = await _deliveryService.getTruckForDriver(user.userId);
-      if (truck != null && truck.deliveries.isNotEmpty) {
-        final rawStops = truck.deliveries
-            .where((d) => d.destLatitude != 0 || d.destLongitude != 0)
-            .map((d) => LatLng(d.destLatitude, d.destLongitude))
+      final deliveries = await _deliveryService.getDeliveriesForDriver(user.userId);
+
+      if (deliveries.isNotEmpty) {
+        final rawStops = deliveries
+            .where((d) => d.stationLat != 0 || d.stationLng != 0)
+            .map((d) => LatLng(d.stationLat, d.stationLng))
             .toList();
 
         final orderedPositions = _orderByNearestNeighbor(
@@ -98,8 +100,8 @@ class _DriverMapPageState extends State<DriverMapPage> {
         );
 
         final nameMap = <LatLng, String>{};
-        for (final d in truck.deliveries) {
-          nameMap[LatLng(d.destLatitude, d.destLongitude)] = d.gasStation;
+        for (final d in deliveries) {
+          nameMap[LatLng(d.stationLat, d.stationLng)] = d.stationName;
         }
 
         _deliveryStops = orderedPositions
@@ -313,8 +315,8 @@ class _DriverMapPageState extends State<DriverMapPage> {
     final theme = Theme.of(context);
 
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(child: LoadingAnimationWidget.staggeredDotsWave(color: theme.colorScheme.primary, size: 50)),
       );
     }
 
@@ -385,7 +387,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
             mapController: _mapController,
             options: MapOptions(
               initialCenter:
-                  _driverPosition ?? const LatLng(14.5995, 120.9842),
+                  _driverPosition ?? const LatLng(13.76, 121.06),
               initialZoom: 14,
               interactionOptions: const InteractionOptions(
                 flags: InteractiveFlag.all,

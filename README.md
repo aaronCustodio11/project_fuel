@@ -1,6 +1,6 @@
 # FleetSense
 
-A Flutter prototype for fuel delivery operations, connecting tanker truck drivers, gas station managers, and fuel suppliers. Uses local JSON files for mock data.
+A Flutter prototype for fuel delivery operations, connecting tanker truck drivers, gas station managers, and fuel suppliers. Uses local JSON files for mock data with Batangas-area locations.
 
 ---
 
@@ -8,24 +8,25 @@ A Flutter prototype for fuel delivery operations, connecting tanker truck driver
 
 ```
 lib/
-├── main.dart                          # App entry point
+├── main.dart                          # App entry point, theme persistence
 ├── core/                              # Shared infrastructure
 │   ├── models/                        # Data classes
-│   │   ├── fleet_tracking.dart
-│   │   ├── maintenance.dart
-│   │   ├── auth_user.dart             # AuthUser
+│   │   ├── auth_user.dart             # AuthUser, user roles
+│   │   ├── fleet_tracking.dart        # FleetTruck, FleetStation
+│   │   ├── maintenance.dart           # MaintenanceRecord
+│   │   ├── theft_alert.dart           # TheftAlert
 │   │   └── truck.dart                 # TruckModel, DeliveryModel
 │   ├── routes/                        # Navigation
 │   │   ├── app_routes.dart            # Route name constants
 │   │   └── route_generator.dart       # onGenerateRoute handler
 │   ├── services/                      # Business logic & data access
-│   │   ├── authentication.dart        # AuthUser, AuthenticationService
-│   │   ├── deliveries.dart            # DeliveryService
+│   │   ├── authentication.dart        # AuthenticationService
+│   │   ├── deliveries.dart            # DeliveryService (3-way join)
 │   │   ├── json_reader.dart           # Reads mock JSON assets
-│   │   ├── maintenance_service.dart
+│   │   ├── maintenance_service.dart   # Maintenance record queries
 │   │   └── osrm_routing.dart          # OSRM API client
 │   └── theme/
-│       └── app_theme.dart             # Light/dark Material 3 themes
+│       └── app_theme.dart             # Light/dark Material 3, ThemeProvider
 │
 ├── features/                          # Feature-first modules
 │   ├── authentication/
@@ -41,7 +42,7 @@ lib/
 │   │   └── widgets/                   # Driver-specific components
 │   ├── profile/
 │   │   └── pages/
-│   │       └── profile_page.dart
+│   │       └── profile_page.dart      # Account, appearance, logout
 │   ├── manager/
 │   │   ├── manager_screen.dart        # Shell with sidebar + IndexedStack
 │   │   ├── pages/
@@ -53,7 +54,7 @@ lib/
 │       ├── supplier_screen.dart       # Shell with sidebar + IndexedStack
 │       ├── pages/
 │       │   ├── dashboard_page.dart
-│       │   ├── fleet_tracking_page.dart
+│       │   ├── fleet_tracking_page.dart  # Live map, user location
 │       │   ├── maintenance_page.dart
 │       │   ├── theft_detection_page.dart
 │       │   └── user_dashboard_page.dart
@@ -68,32 +69,13 @@ lib/
 
 assets/
 └── mock_data/
-    ├── authentication.json
-    ├── maintenance.json
-    └── vehicles.json
+    ├── authentication.json            # 10 users (drivers, managers, suppliers)
+    ├── deliveries.json                # 8 deliveries (truckId + stationId FK)
+    ├── maintenance.json               # 12 records (assignedToId FK)
+    ├── stations.json                  # 12 stations in Batangas area
+    ├── theft_alerts.json              # 7 alerts (vehicleId FK)
+    └── vehicles.json                  # 9 trucks (fuelLevel, driverId nullable)
 ```
-
----
-
-## Key Conventions
-
-### File naming
-
-| Pattern | What it is | Example |
-|---------|-----------|---------|
-| `*_page.dart` | Routable screen | `map_page.dart` |
-| `*_screen.dart` | Shell with bottom nav / tabs | `driver_screen.dart` |
-| `*_service.dart` | Service class | `deliveries.dart` |
-| `*_widget.dart` | Widget directory | `role_badge.dart` |
-| `*_route.dart` | Route constants | `app_routes.dart` |
-
-### Architecture
-
-- **Feature-first** — each user role is a self-contained module under `features/`.
-- **Pages in `pages/`** — every routable screen goes into a `pages/` sub-directory.
-- **Widgets in `widgets/`** — feature-specific reusable widgets.
-- **Shared in `shared/`** — widgets used across multiple features.
-- **Package imports only** — all internal references use `package:project_fuel/...`.
 
 ---
 
@@ -103,7 +85,7 @@ assets/
 |-------|--------|------|
 | `/splash` | `SplashPage` | — |
 | `/login` | `LoginPage` | — |
-| `/driver/home` | `DriverScreen` → `DriverMapPage` (tab 0) | Driver |
+| `/driver/home` | `DriverScreen` (bottom nav: Map, Deliveries, Maintenance) | Driver |
 | `/manager/home` | `ManagerScreen` (sidebar: Dashboard, Fuel Monitoring, Theft Detection) | Manager |
 | `/supplier/home` | `SupplierScreen` (sidebar: Dashboard, Users, Maintenance, Fleet, Theft) | Supplier |
 | `/profile` | `ProfilePage` | All |
@@ -121,14 +103,21 @@ assets/
 | Navigation | Named routes + `onGenerateRoute` |
 | Nav bar | `water_drop_nav_bar` (driver) |
 | Sidebar | `sidebarx` (shared, configurable items) |
+| Theme persistence | SharedPreferences |
 
 ---
 
 ## Mock Data
 
 All data is read from `assets/mock_data/`:
-- `authentication.json` — user accounts with roles
-- `vehicles.json` — truck profiles with delivery stops
-- `maintenance.json` — service records
+
+| File | Contents | Key Relationships |
+|------|----------|-------------------|
+| `authentication.json` | 10 user accounts (2 suppliers, 4 managers, 4 drivers) | Roles: `supplier`, `manager`, `driver` |
+| `vehicles.json` | 9 trucks with `supplierId`, `driverId` (nullable), `fuelLevel`, status | `truckId` ← `deliveries.truckId`, `theft_alerts.vehicleId` |
+| `stations.json` | 12 fuel stations in Batangas area with `supplierId`, capacity, stock | `stationId` ← `deliveries.stationId` |
+| `deliveries.json` | 8 deliveries with `truckId`, `stationId`, product, quantity | FK: `truckId` → `vehicles.truckId`, `stationId` → `stations.stationId` |
+| `maintenance.json` | 12 service records with `vehicleId`, `assignedToId` (driver/manager) | FK: `assignedToId` → `authentication.id` |
+| `theft_alerts.json` | 7 theft alerts with `vehicleId`, Batangas-area coordinates | FK: `vehicleId` → `vehicles.truckId` |
 
 No backend or real database is required.

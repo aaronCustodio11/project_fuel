@@ -1,5 +1,6 @@
 import 'package:chartify/chartify.dart';
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
@@ -547,7 +548,7 @@ class _UserDashboardState extends State<UserDashboard> {
 
   Widget _buildBody(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: LoadingAnimationWidget.staggeredDotsWave(color: Theme.of(context).colorScheme.primary, size: 50));
     }
     if (_errorMessage != null) {
       return Center(
