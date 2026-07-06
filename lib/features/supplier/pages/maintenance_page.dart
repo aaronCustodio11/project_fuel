@@ -51,23 +51,52 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
     }
   }
 
+  List<MaintenanceRecord> get _pendingRecords =>
+      _records.where((r) => r.status == MaintenanceStatus.pending).toList();
+
   List<MaintenanceRecord> get _activeRecords =>
-      _records.where((r) => r.status != MaintenanceStatus.completed && r.status != MaintenanceStatus.cancelled).toList();
+      _records.where((r) => r.status != MaintenanceStatus.completed && r.status != MaintenanceStatus.cancelled && r.status != MaintenanceStatus.pending).toList();
 
   Future<void> _updateStatus(MaintenanceRecord record) async {
-    final statusNotifier = ValueNotifier<MaintenanceStatus>(record.status);
-    final noteCtrl = TextEditingController();
+    if (record.status == MaintenanceStatus.pending) {
+      await _handlePendingApproval(record);
+    } else if (record.status == MaintenanceStatus.scheduled) {
+      await _simpleTransition(record, MaintenanceStatus.inProgress,
+          title: 'Start Maintenance', confirmMsg: 'Start work on');
+    } else if (record.status == MaintenanceStatus.inProgress) {
+      final action = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(FleetRadius.md)),
+          title: const Text('Update Progress'),
+          content: const Text('What would you like to do?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, 'note'), child: const Text('Add Note')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, 'complete'), child: const Text('Mark Complete')),
+          ],
+        ),
+      );
+      if (action == null || !mounted) return;
+      if (action == 'complete') {
+        await _handleComplete(record);
+      } else {
+        await _addNote(record);
+      }
+    }
+  }
 
-    final result = await showDialog<(MaintenanceStatus, String)?>(
+  Future<void> _handlePendingApproval(MaintenanceRecord record) async {
+    final actionNotifier = ValueNotifier<String>('approve');
+    final noteCtrl = TextEditingController();
+    final dateCtrl = TextEditingController(text: DateTime.now().add(const Duration(days: 3)).toString().split(' ')[0]);
+
+    final result = await showDialog<Map<String, dynamic>?>(
       context: context,
       builder: (ctx) {
         final theme = Theme.of(ctx);
         final scheme = theme.colorScheme;
-
         return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(FleetRadius.lg),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(FleetRadius.lg)),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
             child: Padding(
@@ -76,58 +105,114 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Update Status', style: theme.textTheme.headlineMedium),
+                  Text('Review Request', style: theme.textTheme.headlineMedium),
                   const SizedBox(height: FleetSpacing.xs),
                   Text('${record.vehicleName} - ${record.type}',
                       style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
-                  const SizedBox(height: FleetSpacing.lg),
-                  ValueListenableBuilder<MaintenanceStatus>(
-                    valueListenable: statusNotifier,
-                    builder: (_, s, _) => DropdownButtonFormField<MaintenanceStatus>(
-                      initialValue: s,
-                      decoration: InputDecoration(
-                        labelText: 'Status',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(FleetRadius.sm),
-                        ),
-                      ),
-                      items: MaintenanceStatus.values.map((s) => DropdownMenuItem(
-                        value: s,
-                        child: Text(s.label),
-                      )).toList(),
-                      onChanged: (v) {
-                        if (v != null) statusNotifier.value = v;
-                      },
+                  const SizedBox(height: FleetSpacing.md),
+                  Container(
+                    padding: const EdgeInsets.all(FleetSpacing.md),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(FleetRadius.sm),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(record.description, style: theme.textTheme.bodyMedium),
+                        if (record.preferredDate != null) ...[
+                          const SizedBox(height: FleetSpacing.sm),
+                          Row(children: [
+                            Icon(Icons.calendar_today, size: 12, color: scheme.onSurfaceVariant),
+                            const SizedBox(width: 4),
+                            Text('Preferred: ${record.preferredDate!.toString().split(' ')[0]}',
+                                style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+                          ]),
+                        ],
+                      ],
                     ),
                   ),
                   const SizedBox(height: FleetSpacing.md),
-                  TextField(
-                    controller: noteCtrl,
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      labelText: 'Notes',
-                      hintText: 'Describe what was done or why the status changed...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(FleetRadius.sm),
-                      ),
+                  ValueListenableBuilder<String>(
+                    valueListenable: actionNotifier,
+                    builder: (_, a, _) => Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => actionNotifier.value = 'approve',
+                                icon: Icon(Icons.check_circle_outline, size: 18,
+                                    color: a == 'approve' ? AppTheme.successGreen : null),
+                                label: const Text('Approve'),
+                                style: a == 'approve'
+                                    ? OutlinedButton.styleFrom(
+                                        backgroundColor: AppTheme.successGreen.withValues(alpha: 0.08),
+                                        side: const BorderSide(color: AppTheme.successGreen),
+                                      )
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(width: FleetSpacing.sm),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => actionNotifier.value = 'reject',
+                                icon: Icon(Icons.cancel_outlined, size: 18,
+                                    color: a == 'reject' ? AppTheme.dangerRed : null),
+                                label: const Text('Reject'),
+                                style: a == 'reject'
+                                    ? OutlinedButton.styleFrom(
+                                        backgroundColor: AppTheme.dangerRed.withValues(alpha: 0.08),
+                                        side: const BorderSide(color: AppTheme.dangerRed),
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (a == 'approve') ...[
+                          const SizedBox(height: FleetSpacing.md),
+                          TextField(
+                            controller: dateCtrl,
+                            decoration: InputDecoration(
+                              labelText: 'Schedule Date',
+                              prefixIcon: const Icon(Icons.calendar_today, size: 16),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(FleetRadius.sm)),
+                            ),
+                          ),
+                        ],
+                        if (a == 'reject') ...[
+                          const SizedBox(height: FleetSpacing.md),
+                          TextField(
+                            controller: noteCtrl,
+                            maxLines: 3,
+                            decoration: InputDecoration(
+                              labelText: 'Rejection Reason',
+                              hintText: 'Explain why this request was rejected...',
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(FleetRadius.sm)),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   const SizedBox(height: FleetSpacing.lg),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Cancel'),
-                      ),
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
                       const SizedBox(width: FleetSpacing.sm),
                       FilledButton(
                         onPressed: () {
-                          final note = noteCtrl.text.trim();
-                          if (note.isEmpty) return;
-                          Navigator.pop(ctx, (statusNotifier.value, note));
+                          final action = actionNotifier.value;
+                          if (action == 'reject' && noteCtrl.text.trim().isEmpty) return;
+                          Navigator.pop(ctx, {
+                            'action': action,
+                            'reason': noteCtrl.text.trim(),
+                            'scheduledDate': action == 'approve' ? dateCtrl.text.trim() : null,
+                          });
                         },
-                        child: const Text('Update Status'),
+                        child: Text(actionNotifier.value == 'approve' ? 'Approve & Schedule' : 'Reject Request'),
                       ),
                     ],
                   ),
@@ -140,42 +225,217 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
     );
 
     if (result == null || !mounted) return;
-    final (newStatus, note) = result;
+    final action = result['action'] as String;
+    final now = DateTime.now();
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(FleetRadius.md),
-        ),
-        title: const Text('Confirm'),
-        content: Text(
-          'Update ${record.vehicleName} status to "${newStatus.label}"?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(c, true),
-            child: const Text('Confirm'),
+    MaintenanceRecord updated;
+    if (action == 'approve') {
+      final schedStr = result['scheduledDate'] as String?;
+      final schedDate = schedStr != null ? DateTime.tryParse(schedStr) : null;
+      updated = record.copyWith(
+        status: MaintenanceStatus.scheduled,
+        scheduledDate: schedDate ?? now.add(const Duration(days: 3)),
+        notes: [
+          ...record.notes,
+          MaintenanceNote(
+            id: 'N-${now.millisecondsSinceEpoch}',
+            author: 'Supplier',
+            note: 'Request approved and scheduled.',
+            timestamp: now,
           ),
         ],
-      ),
+      );
+    } else {
+      updated = record.copyWith(
+        status: MaintenanceStatus.cancelled,
+        rejectionReason: result['reason'] as String?,
+        notes: [
+          ...record.notes,
+          MaintenanceNote(
+            id: 'N-${now.millisecondsSinceEpoch}',
+            author: 'Supplier',
+            note: 'Request rejected: ${result['reason'] as String}',
+            timestamp: now,
+          ),
+        ],
+      );
+    }
+
+    setState(() {
+      final i = _records.indexWhere((r) => r.id == record.id);
+      if (i != -1) _records[i] = updated;
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(action == 'approve'
+          ? '${record.vehicleName} request approved and scheduled.'
+          : '${record.vehicleName} request rejected.'),
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  Future<void> _simpleTransition(MaintenanceRecord record, MaintenanceStatus newStatus,
+      {required String title, required String confirmMsg}) async {
+    final noteCtrl = TextEditingController();
+
+    final note = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(FleetRadius.lg)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Padding(
+              padding: const EdgeInsets.all(FleetSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: theme.textTheme.headlineMedium),
+                  const SizedBox(height: FleetSpacing.xs),
+                  Text('${record.vehicleName} - ${record.type}',
+                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  const SizedBox(height: FleetSpacing.lg),
+                  TextField(
+                    controller: noteCtrl,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: 'Notes (optional)',
+                      hintText: 'Add any notes about this update...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(FleetRadius.sm)),
+                    ),
+                  ),
+                  const SizedBox(height: FleetSpacing.lg),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                      const SizedBox(width: FleetSpacing.sm),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(ctx, noteCtrl.text.trim()),
+                        child: const Text('Confirm'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
-    if (confirmed != true || !mounted) return;
+
+    if (note == null || !mounted) return;
 
     final now = DateTime.now();
     final updated = record.copyWith(
       status: newStatus,
-      completedDate: newStatus == MaintenanceStatus.completed ? now : record.completedDate,
+      notes: note.isEmpty
+          ? record.notes
+          : [...record.notes, MaintenanceNote(
+              id: 'N-${now.millisecondsSinceEpoch}',
+              author: 'Supplier',
+              note: note,
+              timestamp: now,
+            )],
+    );
+
+    setState(() {
+      final i = _records.indexWhere((r) => r.id == record.id);
+      if (i != -1) _records[i] = updated;
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('${record.vehicleName} moved to "${newStatus.label}".'),
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  Future<void> _handleComplete(MaintenanceRecord record) async {
+    final costCtrl = TextEditingController();
+    final noteCtrl = TextEditingController();
+
+    final result = await showDialog<Map<String, dynamic>?>(
+      context: context,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(FleetRadius.lg)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Padding(
+              padding: const EdgeInsets.all(FleetSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Complete Maintenance', style: theme.textTheme.headlineMedium),
+                  const SizedBox(height: FleetSpacing.xs),
+                  Text('${record.vehicleName} - ${record.type}',
+                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  const SizedBox(height: FleetSpacing.lg),
+                  TextField(
+                    controller: costCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Total Cost (PHP)',
+                      prefixText: '₱ ',
+                      hintText: '0.00',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(FleetRadius.sm)),
+                    ),
+                  ),
+                  const SizedBox(height: FleetSpacing.md),
+                  TextField(
+                    controller: noteCtrl,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: 'Completion Notes',
+                      hintText: 'Describe the work completed...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(FleetRadius.sm)),
+                    ),
+                  ),
+                  const SizedBox(height: FleetSpacing.lg),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                      const SizedBox(width: FleetSpacing.sm),
+                      FilledButton(
+                        onPressed: () {
+                          final cost = double.tryParse(costCtrl.text.trim()) ?? 0;
+                          if (cost <= 0 && noteCtrl.text.trim().isEmpty) return;
+                          Navigator.pop(ctx, {
+                            'cost': cost,
+                            'note': noteCtrl.text.trim(),
+                          });
+                        },
+                        child: const Text('Mark Completed'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (result == null || !mounted) return;
+    final now = DateTime.now();
+    final updated = record.copyWith(
+      status: MaintenanceStatus.completed,
+      cost: (result['cost'] as num).toDouble(),
+      completedDate: now,
       notes: [
         ...record.notes,
         MaintenanceNote(
-          id: 'N-${DateTime.now().millisecondsSinceEpoch}',
-          author: 'Current User',
-          note: note,
+          id: 'N-${now.millisecondsSinceEpoch}',
+          author: 'Supplier',
+          note: result['note'] as String? ?? 'Maintenance completed.',
           timestamp: now,
         ),
       ],
@@ -187,24 +447,84 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
     });
 
     if (!mounted) return;
-    showDialog(
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('${record.vehicleName} maintenance completed.'),
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  Future<void> _addNote(MaintenanceRecord record) async {
+    final noteCtrl = TextEditingController();
+
+    final note = await showDialog<String>(
       context: context,
-      builder: (c) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(FleetRadius.md),
-        ),
-        title: const Text('Success'),
-        content: Text(
-          '${record.vehicleName} status updated to "${newStatus.label}".',
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(c),
-            child: const Text('OK'),
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(FleetRadius.lg)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Padding(
+              padding: const EdgeInsets.all(FleetSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Add Progress Note', style: theme.textTheme.headlineMedium),
+                  const SizedBox(height: FleetSpacing.xs),
+                  Text('${record.vehicleName} - ${record.type}',
+                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  const SizedBox(height: FleetSpacing.lg),
+                  TextField(
+                    controller: noteCtrl,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      labelText: 'Note',
+                      hintText: 'e.g. Found worn brake pads, replacing now...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(FleetRadius.sm)),
+                    ),
+                  ),
+                  const SizedBox(height: FleetSpacing.lg),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                      const SizedBox(width: FleetSpacing.sm),
+                      FilledButton(
+                        onPressed: () {
+                          if (noteCtrl.text.trim().isEmpty) return;
+                          Navigator.pop(ctx, noteCtrl.text.trim());
+                        },
+                        child: const Text('Add Note'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
-      ),
+        );
+      },
     );
+
+    if (note == null || !mounted) return;
+    final now = DateTime.now();
+    final updated = record.copyWith(
+      notes: [
+        ...record.notes,
+        MaintenanceNote(
+          id: 'N-${now.millisecondsSinceEpoch}',
+          author: 'Supplier',
+          note: note,
+          timestamp: now,
+        ),
+      ],
+    );
+
+    setState(() {
+      final i = _records.indexWhere((r) => r.id == record.id);
+      if (i != -1) _records[i] = updated;
+    });
   }
 
   @override
@@ -226,6 +546,7 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
     final scheme = theme.colorScheme;
 
     final total = _records.length;
+    final pending = _pendingRecords.length;
     final inProgress = _records.where((r) => r.status == MaintenanceStatus.inProgress).length;
     final overdue = _records.where((r) => r.status == MaintenanceStatus.scheduled && r.scheduledDate != null && r.scheduledDate!.isBefore(DateTime.now())).length;
     final completed = _records.where((r) => r.status == MaintenanceStatus.completed).length;
@@ -275,7 +596,7 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  _buildKpiRow(context, total, inProgress, overdue, completed),
+                  _buildKpiRow(context, total, pending, inProgress, overdue, completed),
                   const SizedBox(height: FleetSpacing.xl),
                   _buildCostAnalytics(context, totalCost, avgCost, highestCost, inProgCost, completedCost,
                       costTypeLabels, costTypeValues),
@@ -293,7 +614,7 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
     );
   }
 
-  Widget _buildKpiRow(BuildContext context, int total, int inProgress, int overdue, int completed) {
+  Widget _buildKpiRow(BuildContext context, int total, int pending, int inProgress, int overdue, int completed) {
     final scheme = Theme.of(context).colorScheme;
 
     return Row(
@@ -304,7 +625,17 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
           subtitle: 'All time',
           icon: Icons.build_outlined,
           accentColor: scheme.primary,
-          trend: '${_activeRecords.length} active',
+          trend: '$pending pending',
+          trendUp: true,
+        )),
+        const SizedBox(width: FleetSpacing.md),
+        Expanded(child: _KpiCard(
+          label: 'Pending',
+          value: '$pending',
+          subtitle: 'Awaiting review',
+          icon: Icons.hourglass_empty_rounded,
+          accentColor: AppTheme.warningAmber,
+          trend: '$pending requests',
           trendUp: true,
         )),
         const SizedBox(width: FleetSpacing.md),
@@ -439,6 +770,7 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
 
   Widget _buildChartsRow(BuildContext context, List<String> typeLabels, List<double> typeValues, Map<MaintenanceStatus, int> statusCounts) {
     final statusColors = {
+      MaintenanceStatus.pending: AppTheme.warningAmber,
       MaintenanceStatus.scheduled: AppTheme.accentBlue,
       MaintenanceStatus.inProgress: AppTheme.warningAmber,
       MaintenanceStatus.completed: AppTheme.successGreen,
@@ -526,74 +858,105 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
   Widget _buildRecordsList(BuildContext context) {
     final theme = Theme.of(context);
 
+    final pending = _pendingRecords;
     final active = _activeRecords;
     final completed = _records.where((r) => r.status == MaintenanceStatus.completed || r.status == MaintenanceStatus.cancelled).toList();
 
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Active Requests', style: theme.textTheme.titleLarge),
-              const SizedBox(height: FleetSpacing.md),
-              if (active.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(FleetSpacing.xl),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(FleetRadius.md),
-                    border: Border.all(color: Theme.of(context).colorScheme.outline),
-                  ),
-                  child: Text('No active maintenance requests.', style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  )),
-                )
-              else
-                ...active.map((r) => Padding(
-                  padding: const EdgeInsets.only(bottom: FleetSpacing.md),
-                  child: _MaintenanceCard(
-                    record: r,
-                    onUpdateStatus: () => _updateStatus(r),
-                    userNames: _userNames,
-                  ),
-                )),
-            ],
-          ),
-        ),
-        const SizedBox(width: FleetSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Completed & Cancelled', style: theme.textTheme.titleLarge),
-              const SizedBox(height: FleetSpacing.md),
-              if (completed.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(FleetSpacing.xl),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(FleetRadius.md),
-                    border: Border.all(color: Theme.of(context).colorScheme.outline),
-                  ),
-                  child: Text('No completed or cancelled requests.', style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  )),
-                )
-              else
-                ...completed.map((r) => Padding(
-                  padding: const EdgeInsets.only(bottom: FleetSpacing.md),
-                  child: _MaintenanceCard(
-                    record: r,
-                    onUpdateStatus: () => _updateStatus(r),
-                    userNames: _userNames,
-                  ),
-                )),
-            ],
-          ),
+        Text('Pending Requests', style: theme.textTheme.titleLarge),
+        const SizedBox(height: FleetSpacing.md),
+        if (pending.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(FleetSpacing.xl),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(FleetRadius.md),
+              border: Border.all(color: Theme.of(context).colorScheme.outline),
+            ),
+            child: Text('No pending requests.', style: theme.textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            )),
+          )
+        else
+          ...pending.map((r) => Padding(
+            padding: const EdgeInsets.only(bottom: FleetSpacing.md),
+            child: _MaintenanceCard(
+              record: r,
+              onUpdateStatus: () => _updateStatus(r),
+              userNames: _userNames,
+            ),
+          )),
+        const SizedBox(height: FleetSpacing.xl),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Active Requests', style: theme.textTheme.titleLarge),
+                  const SizedBox(height: FleetSpacing.md),
+                  if (active.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(FleetSpacing.xl),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(FleetRadius.md),
+                        border: Border.all(color: Theme.of(context).colorScheme.outline),
+                      ),
+                      child: Text('No active maintenance requests.', style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      )),
+                    )
+                  else
+                    ...active.map((r) => Padding(
+                      padding: const EdgeInsets.only(bottom: FleetSpacing.md),
+                      child: _MaintenanceCard(
+                        record: r,
+                        onUpdateStatus: () => _updateStatus(r),
+                        userNames: _userNames,
+                      ),
+                    )),
+                ],
+              ),
+            ),
+            const SizedBox(width: FleetSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Completed & Cancelled', style: theme.textTheme.titleLarge),
+                  const SizedBox(height: FleetSpacing.md),
+                  if (completed.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(FleetSpacing.xl),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(FleetRadius.md),
+                        border: Border.all(color: Theme.of(context).colorScheme.outline),
+                      ),
+                      child: Text('No completed or cancelled requests.', style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      )),
+                    )
+                  else
+                    ...completed.map((r) => Padding(
+                      padding: const EdgeInsets.only(bottom: FleetSpacing.md),
+                      child: _MaintenanceCard(
+                        record: r,
+                        onUpdateStatus: () => _updateStatus(r),
+                        userNames: _userNames,
+                      ),
+                    )),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -608,6 +971,7 @@ class _MaintenanceCard extends StatelessWidget {
   const _MaintenanceCard({required this.record, required this.onUpdateStatus, this.userNames = const {}});
 
   Color _statusColor(MaintenanceStatus s) => switch (s) {
+    MaintenanceStatus.pending => AppTheme.warningAmber,
     MaintenanceStatus.scheduled => AppTheme.accentBlue,
     MaintenanceStatus.inProgress => AppTheme.warningAmber,
     MaintenanceStatus.completed => AppTheme.successGreen,
@@ -751,8 +1115,40 @@ class _MaintenanceCard extends StatelessWidget {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: onUpdateStatus,
-                icon: const Icon(Icons.edit_outlined, size: 16),
-                label: const Text('Update Status'),
+                icon: Icon(
+                  record.status == MaintenanceStatus.pending ? Icons.rate_review_outlined :
+                  record.status == MaintenanceStatus.scheduled ? Icons.play_arrow_rounded :
+                  Icons.edit_outlined,
+                  size: 16,
+                ),
+                label: Text(
+                  record.status == MaintenanceStatus.pending ? 'Review Request' :
+                  record.status == MaintenanceStatus.scheduled ? 'Start Maintenance' :
+                  'Update Progress',
+                ),
+              ),
+            ),
+          ],
+          if (record.rejectionReason != null && record.rejectionReason!.isNotEmpty) ...[
+            const SizedBox(height: FleetSpacing.sm),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(FleetSpacing.md),
+              decoration: BoxDecoration(
+                color: AppTheme.dangerRed.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(FleetRadius.sm),
+                border: Border.all(color: AppTheme.dangerRed.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, size: 14, color: AppTheme.dangerRed),
+                  const SizedBox(width: FleetSpacing.sm),
+                  Expanded(
+                    child: Text(record.rejectionReason!,
+                        style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.dangerRed)),
+                  ),
+                ],
               ),
             ),
           ],

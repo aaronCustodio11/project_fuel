@@ -5,14 +5,40 @@ import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:project_fuel/shared/widgets/logout_dialog.dart';
 
-class ProfileScreenPage extends StatefulWidget {
+class ProfileScreenPage extends StatelessWidget {
   const ProfileScreenPage({super.key});
 
   @override
-  State<ProfileScreenPage> createState() => _ProfileScreenPageState();
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: theme.colorScheme.surfaceContainerLow,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(FleetSpacing.xl, FleetSpacing.xl, FleetSpacing.xl, 0),
+              child: Text('Profile', style: theme.textTheme.headlineLarge),
+            ),
+            const SizedBox(height: FleetSpacing.md),
+            const Expanded(child: ProfileView()),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _ProfileScreenPageState extends State<ProfileScreenPage> {
+class ProfileView extends StatefulWidget {
+  const ProfileView({super.key});
+
+  @override
+  State<ProfileView> createState() => _ProfileViewState();
+}
+
+class _ProfileViewState extends State<ProfileView> {
   final AuthenticationService _authService = AuthenticationService();
   AuthUser? _user;
   bool _isLoading = true;
@@ -49,35 +75,17 @@ class _ProfileScreenPageState extends State<ProfileScreenPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final isWide = MediaQuery.sizeOf(context).width >= 900;
 
-    return Scaffold(
-      backgroundColor: scheme.surfaceContainerLow,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(FleetSpacing.xl, FleetSpacing.xl, FleetSpacing.xl, 0),
-              child: Text('Profile', style: theme.textTheme.headlineLarge),
-            ),
-            const SizedBox(height: FleetSpacing.md),
-            Expanded(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1200),
-                  child: _isLoading
-                      ? Center(child: LoadingAnimationWidget.staggeredDotsWave(color: theme.colorScheme.primary, size: 50))
-                      : SingleChildScrollView(
-                          padding: const EdgeInsets.all(FleetSpacing.xl),
-                          child: _buildContent(theme, isWide),
-                        ),
-                ),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1200),
+        child: _isLoading
+            ? Center(child: LoadingAnimationWidget.staggeredDotsWave(color: theme.colorScheme.primary, size: 50))
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(FleetSpacing.xl),
+                child: _buildContent(theme, isWide),
               ),
-            ),
-          ],
-        ),
       ),
     );
   }

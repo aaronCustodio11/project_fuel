@@ -1,5 +1,6 @@
 import 'package:chartify/chartify.dart';
 import 'package:flutter/material.dart';
+import 'package:project_fuel/core/routes/app_routes.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 
@@ -153,14 +154,7 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(FleetSpacing.md),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(FleetRadius.sm),
-            ),
-            child: Icon(icon, color: Colors.white, size: 28),
-          ),
+          _AnimatedWeatherIcon(icon: icon),
           const SizedBox(width: FleetSpacing.lg),
           Expanded(
             child: Column(
@@ -196,6 +190,22 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
                   ],
                 ),
               ],
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.profile),
+            icon: const Icon(Icons.person_outline, size: 18, color: Colors.white),
+            label: const Text('Go to Account Page'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(FleetRadius.sm),
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: FleetSpacing.md,
+                vertical: FleetSpacing.sm,
+              ),
             ),
           ),
         ],
@@ -876,6 +886,74 @@ class _MaintenanceSummary extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AnimatedWeatherIcon extends StatefulWidget {
+  final IconData icon;
+  const _AnimatedWeatherIcon({required this.icon});
+
+  @override
+  State<_AnimatedWeatherIcon> createState() => _AnimatedWeatherIconState();
+}
+
+class _AnimatedWeatherIconState extends State<_AnimatedWeatherIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isSun = widget.icon == Icons.wb_sunny_outlined;
+    final isCloud = widget.icon == Icons.wb_cloudy_outlined;
+
+    return Container(
+      padding: const EdgeInsets.all(FleetSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(FleetRadius.sm),
+      ),
+      child: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, child) {
+          double dx = 0, dy = 0;
+          double scale = 1.0;
+
+          if (isSun) {
+            scale = 1.0 + _animation.value * 0.06;
+          } else if (isCloud) {
+            dx = (_animation.value - 0.5) * 4;
+          } else {
+            dy = (_animation.value - 0.5) * -4;
+          }
+
+          return Transform.translate(
+            offset: Offset(dx, dy),
+            child: Transform.scale(
+              scale: scale,
+              child: child,
+            ),
+          );
+        },
+        child: Icon(widget.icon, color: Colors.white, size: 28),
+      ),
     );
   }
 }

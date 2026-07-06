@@ -233,5 +233,35 @@
     ],
     "assignedToId": 2,
     "createdAt": "2026-06-12T09:00:00.000"
+  },
+  {
+    "id": "MNT-013",
+    "vehicleId": "TRK-001",
+    "vehicleName": "Truck #FL-2042",
+    "type": "Oil Change",
+    "description": "Oil change due at 5,000 km - requesting schedule for next week",
+    "status": "pending",
+    "priority": "medium",
+    "preferredDate": "2026-07-15T09:00:00.000",
+    "completedDate": null,
+    "cost": 0,
+    "notes": [],
+    "assignedToId": 1,
+    "createdAt": "2026-07-08T14:30:00.000"
+  },
+  {
+    "id": "MNT-014",
+    "vehicleId": "TRK-005",
+    "vehicleName": "Truck #FL-1567",
+    "type": "Brake Pad Replacement",
+    "description": "Front brake pads are squeaking - likely worn and needs replacement soon",
+    "status": "pending",
+    "priority": "high",
+    "preferredDate": "2026-07-12T08:00:00.000",
+    "completedDate": null,
+    "cost": 0,
+    "notes": [],
+    "assignedToId": 3,
+    "createdAt": "2026-07-09T09:15:00.000"
   }
 ]

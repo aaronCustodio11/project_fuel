@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:project_fuel/features/profile/pages/profile_page.dart';
 import 'package:project_fuel/features/supplier/pages/dashboard_page.dart';
 import 'package:project_fuel/features/supplier/pages/fleet_tracking_page.dart';
 import 'package:project_fuel/features/supplier/pages/maintenance_page.dart';
 import 'package:project_fuel/features/supplier/pages/theft_detection_page.dart';
 import 'package:project_fuel/features/supplier/pages/user_dashboard_page.dart';
 import 'package:project_fuel/shared/widgets/sidebar.dart';
+import 'package:project_fuel/shared/widgets/onboarding.dart';
 import 'package:sidebarx/sidebarx.dart';
 
 class SupplierScreen extends StatefulWidget {
@@ -17,12 +19,21 @@ class SupplierScreen extends StatefulWidget {
 class _SupplierScreenState extends State<SupplierScreen> {
   int _selectedIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showOnboardingOverlay(context, role: OnboardingRole.supplier);
+    });
+  }
+
   late final List<Widget> _pages = [
     SupplierDashboard(onNavigate: _onNavigate),
     const UserDashboard(),
     const SupplierMaintenance(),
     const SupplierFleetTracking(),
     const SupplierTheftDetection(),
+    const ProfileView(),
   ];
 
   void _onNavigate(int index) => setState(() => _selectedIndex = index);
@@ -43,6 +54,8 @@ class _SupplierScreenState extends State<SupplierScreen> {
           Sidebar(
             initialIndex: _selectedIndex,
             onItemSelected: (i) => setState(() => _selectedIndex = i),
+            onAccountTap: () => setState(() => _selectedIndex = _pages.length - 1),
+            isAccountSelected: _selectedIndex == _pages.length - 1,
             items: _sidebarItems,
           ),
           Expanded(

@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:project_fuel/core/routes/app_routes.dart';
-import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
-import 'package:project_fuel/shared/widgets/logout_dialog.dart';
 import 'package:sidebarx/sidebarx.dart';
 
 class Sidebar extends StatefulWidget {
-  const Sidebar({super.key, this.onItemSelected, this.initialIndex = 0, required this.items});
+  const Sidebar({
+    super.key,
+    this.onItemSelected,
+    this.onAccountTap,
+    this.isAccountSelected = false,
+    this.initialIndex = 0,
+    required this.items,
+  });
 
   final ValueChanged<int>? onItemSelected;
+  final VoidCallback? onAccountTap;
+  final bool isAccountSelected;
   final int initialIndex;
   final List<SidebarXItem> items;
 
@@ -29,7 +36,10 @@ class _SidebarState extends State<Sidebar> {
   void initState() {
     super.initState();
     _lastIndex = widget.initialIndex;
-    _controller = SidebarXController(selectedIndex: widget.initialIndex, extended: _isExtended);
+    _controller = SidebarXController(
+      selectedIndex: widget.initialIndex,
+      extended: _isExtended,
+    );
     _controller.addListener(_onChanged);
   }
 
@@ -82,7 +92,11 @@ class _SidebarState extends State<Sidebar> {
       ),
       hoverColor: scheme.surfaceContainerHighest,
       textStyle: TextStyle(color: fg, fontSize: 14),
-      selectedTextStyle: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 14),
+      selectedTextStyle: TextStyle(
+        color: fg,
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+      ),
       hoverTextStyle: TextStyle(color: fg, fontSize: 14),
       itemTextPadding: const EdgeInsets.only(left: FleetSpacing.md),
       selectedItemTextPadding: const EdgeInsets.only(left: FleetSpacing.md),
@@ -125,7 +139,8 @@ class _SidebarState extends State<Sidebar> {
         theme: _cachedTheme,
         extendedTheme: const SidebarXTheme(width: 240),
         headerBuilder: _buildHeader,
-        footerBuilder: (context, extended) => _buildFooter(context, extended, fg),
+        footerBuilder: (context, extended) =>
+            _buildFooter(context, extended, fg),
         items: widget.items,
       ),
     );
@@ -143,7 +158,11 @@ class _SidebarState extends State<Sidebar> {
             const CircleAvatar(
               radius: 18,
               backgroundColor: AppTheme.successGreen,
-              child: Icon(Icons.local_shipping_outlined, color: Colors.white, size: 18),
+              child: Icon(
+                Icons.local_shipping_outlined,
+                color: Colors.white,
+                size: 18,
+              ),
             ),
             if (extended) ...[
               const SizedBox(height: FleetSpacing.xs),
@@ -163,67 +182,105 @@ class _SidebarState extends State<Sidebar> {
   }
 
   Widget _buildFooter(BuildContext context, bool extended, Color fg) {
-    final themeMode = ThemeProvider.read(context);
-    final isLight = themeMode == ThemeMode.light ||
-        (themeMode == ThemeMode.system && _lastBrightness == Brightness.light);
-    final themeIcon = isLight ? Icons.dark_mode_outlined : Icons.light_mode_outlined;
-    final themeLabel = isLight ? 'Dark' : 'Light';
+    final scheme = Theme.of(context).colorScheme;
+    final isSelected = widget.isAccountSelected;
 
     return Padding(
-      padding: EdgeInsets.all(extended ? FleetSpacing.md : FleetSpacing.sm),
+      padding: EdgeInsets.fromLTRB(
+        FleetSpacing.sm,
+        0,
+        FleetSpacing.sm,
+        extended ? FleetSpacing.md : FleetSpacing.sm,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          InkWell(
-            onTap: () => ThemeProvider.toggle(context),
-            borderRadius: BorderRadius.circular(FleetRadius.sm),
-            child: extended
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(themeIcon, color: fg.withValues(alpha: 0.7), size: 18),
-                      const SizedBox(width: FleetSpacing.sm),
-                      Flexible(
-                        child: Text(
-                          themeLabel,
-                          style: TextStyle(color: fg.withValues(alpha: 0.7), fontSize: 13),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  )
-                : Icon(themeIcon, color: fg.withValues(alpha: 0.7), size: 18),
-          ),
+          Divider(height: 1, color: scheme.outlineVariant),
           SizedBox(height: extended ? FleetSpacing.sm : FleetSpacing.xs),
-          InkWell(
-            onTap: () async {
-              final confirmed = await showLogoutConfirmationDialog(context);
-              if (confirmed && context.mounted) {
-                await AuthenticationService().logout();
-                if (context.mounted) {
-                  Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
-                }
-              }
-            },
-            borderRadius: BorderRadius.circular(FleetRadius.sm),
-            child: extended
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.logout, color: fg.withValues(alpha: 0.7), size: 18),
-                      const SizedBox(width: FleetSpacing.sm),
-                      Flexible(
-                        child: Text(
-                          'Logout',
-                          style: TextStyle(color: fg.withValues(alpha: 0.7), fontSize: 13),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  )
-                : Icon(Icons.logout, color: fg.withValues(alpha: 0.7), size: 18),
+          _AccountButton(
+            extended: extended,
+            isSelected: isSelected,
+            onTap: widget.onAccountTap ??
+                () => Navigator.of(context).pushNamed(AppRoutes.profile),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AccountButton extends StatefulWidget {
+  final bool extended;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _AccountButton({
+    required this.extended,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_AccountButton> createState() => _AccountButtonState();
+}
+
+class _AccountButtonState extends State<_AccountButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = scheme.brightness == Brightness.dark;
+    final fg = isDark ? Colors.white : Colors.black;
+
+    final showHighlight = widget.isSelected || _isHovered;
+    final bg = showHighlight ? scheme.surfaceContainerHighest : Colors.transparent;
+    final iconColor = widget.isSelected
+        ? AppTheme.successGreen
+        : fg.withValues(alpha: 0.7);
+    final textWeight = widget.isSelected ? FontWeight.w600 : FontWeight.w400;
+
+    return Tooltip(
+      message: 'Account',
+      waitDuration: const Duration(milliseconds: 300),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(FleetRadius.sm),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            margin: const EdgeInsets.symmetric(
+              horizontal: 0,
+              vertical: FleetSpacing.xs,
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: FleetSpacing.md,
+              vertical: FleetSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(FleetRadius.sm),
+            ),
+            child: widget.extended
+                ? Row(
+                    children: [
+                      Icon(Icons.person_outline, color: iconColor, size: 20),
+                      const SizedBox(width: FleetSpacing.md),
+                      Text(
+                        'Account',
+                        style: TextStyle(
+                          color: fg,
+                          fontSize: 14,
+                          fontWeight: textWeight,
+                        ),
+                      ),
+                    ],
+                  )
+                : Icon(Icons.person_outline, color: iconColor, size: 20),
+          ),
+        ),
       ),
     );
   }

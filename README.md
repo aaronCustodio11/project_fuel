@@ -40,21 +40,20 @@ lib/
 │   │   │   ├── deliveries_page.dart   # Delivery stats & history
 │   │   │   └── maintenance_page.dart  # Vehicle maintenance schedule
 │   │   └── widgets/                   # Driver-specific components
+│   ├── manager/
+│   │   ├── manager_screen.dart        # Shell with sidebar + IndexedStack
+│   │   └── pages/
+│   │       ├── dashboard_page.dart
+│   │       ├── fuel_monitoring_page.dart
+│   │       └── theft_detection_page.dart
 │   ├── profile/
 │   │   └── pages/
 │   │       └── profile_page.dart      # Account, appearance, logout
-│   ├── manager/
-│   │   ├── manager_screen.dart        # Shell with sidebar + IndexedStack
-│   │   ├── pages/
-│   │   │   ├── dashboard_page.dart
-│   │   │   ├── fuel_monitoring_page.dart
-│   │   │   └── theft_detection_page.dart
-│   │   └── widgets/                   # Manager-specific components
 │   └── supplier/
 │       ├── supplier_screen.dart       # Shell with sidebar + IndexedStack
 │       ├── pages/
 │       │   ├── dashboard_page.dart
-│       │   ├── fleet_tracking_page.dart  # Live map, user location
+│       │   ├── fleet_tracking_page.dart
 │       │   ├── maintenance_page.dart
 │       │   ├── theft_detection_page.dart
 │       │   └── user_dashboard_page.dart
@@ -64,14 +63,17 @@ lib/
     └── widgets/
         ├── bottom_nav_bar.dart        # WaterDropNavBar wrapper
         ├── logout_dialog.dart         # Confirmation dialog
+        ├── onboarding.dart            # Role-based onboarding overlay
         ├── role_badge.dart            # Color-coded marker with glow
         └── sidebar.dart               # Collapsible sidebar with items prop
 
 assets/
+├── images/
+│   └── Onboarding/                    # 9 intro screenshots (Supplier, Driver, Manager)
 └── mock_data/
     ├── authentication.json            # 10 users (drivers, managers, suppliers)
     ├── deliveries.json                # 8 deliveries (truckId + stationId FK)
-    ├── maintenance.json               # 12 records (assignedToId FK)
+    ├── maintenance.json               # 14 records (assignedToId FK)
     ├── stations.json                  # 12 stations in Batangas area
     ├── theft_alerts.json              # 7 alerts (vehicleId FK)
     └── vehicles.json                  # 9 trucks (fuelLevel, driverId nullable)
@@ -85,10 +87,12 @@ assets/
 |-------|--------|------|
 | `/splash` | `SplashPage` | — |
 | `/login` | `LoginPage` | — |
-| `/driver/home` | `DriverScreen` (bottom nav: Map, Deliveries, Maintenance) | Driver |
+| `/register` | `PlaceholderPage` | — |
+| `/driver/home` | `DriverScreen` (bottom nav: Map, Maintenance, Deliveries, Profile) | Driver |
 | `/manager/home` | `ManagerScreen` (sidebar: Dashboard, Fuel Monitoring, Theft Detection) | Manager |
 | `/supplier/home` | `SupplierScreen` (sidebar: Dashboard, Users, Maintenance, Fleet, Theft) | Supplier |
 | `/profile` | `ProfilePage` | All |
+| `/settings` | `PlaceholderPage` | All |
 
 ---
 
@@ -117,7 +121,7 @@ All data is read from `assets/mock_data/`:
 | `vehicles.json` | 9 trucks with `supplierId`, `driverId` (nullable), `fuelLevel`, status | `truckId` ← `deliveries.truckId`, `theft_alerts.vehicleId` |
 | `stations.json` | 12 fuel stations in Batangas area with `supplierId`, capacity, stock | `stationId` ← `deliveries.stationId` |
 | `deliveries.json` | 8 deliveries with `truckId`, `stationId`, product, quantity | FK: `truckId` → `vehicles.truckId`, `stationId` → `stations.stationId` |
-| `maintenance.json` | 12 service records with `vehicleId`, `assignedToId` (driver/manager) | FK: `assignedToId` → `authentication.id` |
+| `maintenance.json` | 14 service records with `vehicleId`, `assignedToId` (driver/manager) | FK: `assignedToId` → `authentication.id` |
 | `theft_alerts.json` | 7 theft alerts with `vehicleId`, Batangas-area coordinates | FK: `vehicleId` → `vehicles.truckId` |
 
 No backend or real database is required.
@@ -131,6 +135,10 @@ No backend or real database is required.
 **Splash** — startup screen; checks for a saved session and redirects to Login or the appropriate dashboard. Shows loading animation while deciding.
 
 **Login** — email/password authentication. Responsive layout (desktop: hero panel + form side-by-side; mobile: stacked). Toggles password visibility, shows inline errors on failed login, navigates to the role-specific screen on success.
+
+### Onboarding
+
+On first login, each role sees a role-specific introduction overlay with feature overview pages (illustrated with screenshots), a step progress timeline, and a preferences setup page (theme: System/Light/Dark, notification toggle). The overlay can be skipped at any time.
 
 ### Driver
 
@@ -146,7 +154,7 @@ The driver shell uses a **bottom tab bar** with four tabs, preserving page state
 
 **Deliveries** — summary of all assigned deliveries. Shows four KPI cards (Total, Completed, En Route, Pending), truck info (volume, speed, status), and a scrollable history list with status chips.
 
-**Vehicle Maintenance** — displays the driver's assigned truck info, scheduled maintenance items (with priority indicators), and completed service history (with dates and costs).
+**Vehicle Maintenance** — full request lifecycle from the driver's perspective. Shows the assigned truck info, pending requests (with edit button), scheduled & in-progress items (with priority indicators), rejected requests (with reason and resubmit button), and completed service history (with dates and costs). A "Request" button opens a dialog to submit a new request (type, description, priority, preferred date). Pending requests can be edited in-place; rejected requests can be resubmitted after addressing the rejection reason.
 
 ### Manager
 
@@ -177,7 +185,7 @@ The supplier shell uses a **sidebar** with five pages, preserving page state via
 - Truck Fuel Monitoring list with fuel progress bars and color thresholds.
 - Fuel analytics KPIs + bar chart.
 
-**Maintenance** — full maintenance lifecycle management. KPI row (Total, In Progress, Overdue, Completed), cost analytics (Total Spent, Avg per Request, In Progress, Completed) with a cost-by-type bar chart, requests-by-type bar chart, status-distribution pie chart, and two-column record list (Active / Completed & Cancelled). Each record card shows type, vehicle, status/priority badges, dates, assigned user, cost, notes, and an "Update Status" multi-step dialog (select status → add notes → confirm).
+**Maintenance** — full maintenance lifecycle management covering driver-submitted requests. KPI row (Total, Pending, In Progress, Overdue, Completed), cost analytics (Total Spent, Avg per Request, In Progress, Completed) with a cost-by-type bar chart, requests-by-type bar chart, status-distribution pie chart, and three-column record list (Pending Requests / Active / Service History). Pending requests show an "Approve/Reject" dialog (approve with scheduled date and note, or reject with required reason). The status workflow progresses through Pending → Scheduled → In Progress → Completed, with progress notes on each transition and cost recording on completion. Cancelled records display the rejection reason. Each record card shows type, vehicle, status/priority badges, dates, assigned user, cost, notes, and contextual action buttons based on current status.
 
 **Theft Detection** — security incident management. Defines alert types (fuelTheft, unauthorizedAccess, gpsTampering, routeDeviation), severities (critical → low), and statuses (new → investigating → resolved/dismissed). KPI row (Total, Critical, Investigating, Resolved), alerts-by-type bar chart, severity-distribution pie chart, and two-column list (Active / Resolved & Dismissed) with update-status workflow.
 
