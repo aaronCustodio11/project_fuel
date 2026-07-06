@@ -4,7 +4,7 @@ import 'package:project_fuel/features/manager/pages/fuel_monitoring_page.dart';
 import 'package:project_fuel/features/manager/pages/theft_detection_page.dart';
 import 'package:project_fuel/features/profile/pages/profile_page.dart';
 import 'package:project_fuel/shared/widgets/sidebar.dart';
-import 'package:project_fuel/shared/widgets/introductory.dart';
+import 'package:project_fuel/shared/widgets/onboarding.dart';
 import 'package:sidebarx/sidebarx.dart';
 
 class ManagerScreen extends StatefulWidget {
@@ -28,7 +28,7 @@ class _ManagerScreenState extends State<ManagerScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      showIntroductoryOverlay(context, role: IntroductoryRole.manager);
+      showOnboardingOverlay(context, role: OnboardingRole.manager);
     });
   }
 

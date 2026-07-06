@@ -4,7 +4,7 @@ import 'package:project_fuel/features/driver/pages/deliveries_page.dart';
 import 'package:project_fuel/features/driver/pages/maintenance_page.dart';
 import 'package:project_fuel/features/profile/pages/profile_page.dart';
 import 'package:project_fuel/shared/widgets/bottom_nav_bar.dart';
-import 'package:project_fuel/shared/widgets/introductory.dart';
+import 'package:project_fuel/shared/widgets/onboarding.dart';
 
 class DriverScreen extends StatefulWidget {
   const DriverScreen({super.key});
@@ -27,7 +27,7 @@ class _DriverScreenState extends State<DriverScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      showIntroductoryOverlay(context, role: IntroductoryRole.driver);
+      showOnboardingOverlay(context, role: OnboardingRole.driver);
     });
   }
 

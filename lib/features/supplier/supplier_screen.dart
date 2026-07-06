@@ -6,7 +6,7 @@ import 'package:project_fuel/features/supplier/pages/maintenance_page.dart';
 import 'package:project_fuel/features/supplier/pages/theft_detection_page.dart';
 import 'package:project_fuel/features/supplier/pages/user_dashboard_page.dart';
 import 'package:project_fuel/shared/widgets/sidebar.dart';
-import 'package:project_fuel/shared/widgets/introductory.dart';
+import 'package:project_fuel/shared/widgets/onboarding.dart';
 import 'package:sidebarx/sidebarx.dart';
 
 class SupplierScreen extends StatefulWidget {
@@ -23,7 +23,7 @@ class _SupplierScreenState extends State<SupplierScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      showIntroductoryOverlay(context, role: IntroductoryRole.supplier);
+      showOnboardingOverlay(context, role: OnboardingRole.supplier);
     });
   }
 
