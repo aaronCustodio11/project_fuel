@@ -41,7 +41,6 @@ lib/
 │   ├── profile/
 │   └── settings/
 │
-<<<<<<< Updated upstream
 ├── shared/
 │   ├── widgets/
 │   ├── models/
@@ -52,24 +51,6 @@ lib/
     ├── icons/
     ├── animations/
     └── mock_data/
-=======
-└── shared/
-    └── widgets/
-        ├── bottom_nav_bar.dart        # WaterDropNavBar wrapper
-        ├── logout_dialog.dart         # Confirmation dialog
-        ├── onboarding.dart            # Role-based onboarding overlay
-        ├── role_badge.dart            # Color-coded marker with glow
-        └── sidebar.dart               # Collapsible sidebar with items prop
-
-assets/
-└── mock_data/
-    ├── authentication.json            # 10 users (drivers, managers, suppliers)
-    ├── deliveries.json                # 8 deliveries (truckId + stationId FK)
-    ├── maintenance.json               # 12 records (assignedToId FK)
-    ├── stations.json                  # 12 stations in Batangas area
-    ├── theft_alerts.json              # 7 alerts (vehicleId FK)
-    └── vehicles.json                  # 9 trucks (fuelLevel, driverId nullable)
->>>>>>> Stashed changes
 ```
 
 ---
@@ -125,15 +106,7 @@ Examples:
 - Button themes
 - Input decoration themes
 
-<<<<<<< Updated upstream
 ---
-=======
-### Onboarding
-
-On first login, each role sees a role-specific introduction overlay with feature overview pages (illustrated with screenshots), a step progress timeline, and a preferences setup page (theme: System/Light/Dark, notification toggle). The overlay can be skipped at any time.
-
-### Driver
->>>>>>> Stashed changes
 
 ### `routes/`
 
@@ -141,13 +114,9 @@ Responsible for application navigation.
 
 Contains:
 
-<<<<<<< Updated upstream
 - Named routes
 - Route generator
 - Navigation configuration
-=======
-**Vehicle Maintenance** — full request lifecycle from the driver's perspective. Shows the assigned truck info, pending requests (with edit button), scheduled & in-progress items (with priority indicators), rejected requests (with reason and resubmit button), and completed service history (with dates and costs). A "Request" button opens a dialog to submit a new request (type, description, priority, preferred date). Pending requests can be edited in-place; rejected requests can be resubmitted after addressing the rejection reason.
->>>>>>> Stashed changes
 
 ---
 
@@ -166,11 +135,7 @@ Examples:
 
 ### `utils/`
 
-<<<<<<< Updated upstream
 Utility functions and helper classes.
-=======
-**Maintenance** — full maintenance lifecycle management covering driver-submitted requests. KPI row (Total, Pending, In Progress, Overdue, Completed), cost analytics (Total Spent, Avg per Request, In Progress, Completed) with a cost-by-type bar chart, requests-by-type bar chart, status-distribution pie chart, and three-column record list (Pending Requests / Active / Service History). Pending requests show an "Approve/Reject" dialog (approve with scheduled date and note, or reject with required reason). The status workflow progresses through Pending → Scheduled → In Progress → Completed, with progress notes on each transition and cost recording on completion. Cancelled records display the rejection reason. Each record card shows type, vehicle, status/priority badges, dates, assigned user, cost, notes, and contextual action buttons based on current status.
->>>>>>> Stashed changes
 
 Examples:
 
