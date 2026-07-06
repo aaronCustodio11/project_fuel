@@ -71,6 +71,13 @@ flutter:
   - assets/mock_data/authentication.json
   - assets/mock_data/truck_navigation.json
   - assets/mock_data/maintenance.json
+<<<<<<< Updated upstream
+=======
+  - assets/mock_data/stations.json
+  - assets/mock_data/theft_alerts.json
+  - assets/mock_data/vehicles.json
+  - assets/images/Onboarding/
+>>>>>>> Stashed changes
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
