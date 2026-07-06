@@ -865,70 +865,6 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-<<<<<<< Updated upstream:lib/features/supplier/supplier_maintenance.dart
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Active Requests', style: theme.textTheme.titleLarge),
-              const SizedBox(height: FleetSpacing.md),
-              if (active.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(FleetSpacing.xl),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(FleetRadius.md),
-                    border: Border.all(color: Theme.of(context).colorScheme.outline),
-                  ),
-                  child: Text('No active maintenance requests.', style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  )),
-                )
-              else
-                ...active.map((r) => Padding(
-                  padding: const EdgeInsets.only(bottom: FleetSpacing.md),
-                  child: _MaintenanceCard(
-                    record: r,
-                    onUpdateStatus: () => _updateStatus(r),
-                    userNames: _userNames,
-                  ),
-                )),
-            ],
-          ),
-        ),
-        const SizedBox(width: FleetSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Completed & Cancelled', style: theme.textTheme.titleLarge),
-              const SizedBox(height: FleetSpacing.md),
-              if (completed.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(FleetSpacing.xl),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(FleetRadius.md),
-                    border: Border.all(color: Theme.of(context).colorScheme.outline),
-                  ),
-                  child: Text('No completed or cancelled requests.', style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  )),
-                )
-              else
-                ...completed.map((r) => Padding(
-                  padding: const EdgeInsets.only(bottom: FleetSpacing.md),
-                  child: _MaintenanceCard(
-                    record: r,
-                    onUpdateStatus: () => _updateStatus(r),
-                    userNames: _userNames,
-                  ),
-                )),
-            ],
-          ),
-=======
         Text('Pending Requests', style: theme.textTheme.titleLarge),
         const SizedBox(height: FleetSpacing.md),
         if (pending.isEmpty)
@@ -1021,7 +957,6 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
               ),
             ),
           ],
->>>>>>> Stashed changes:lib/features/supplier/pages/maintenance_page.dart
         ),
       ],
     );
