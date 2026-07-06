@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project_fuel/features/profile/pages/profile_page.dart';
 import 'package:project_fuel/features/supplier/pages/dashboard_page.dart';
 import 'package:project_fuel/features/supplier/pages/fleet_tracking_page.dart';
+import 'package:project_fuel/features/supplier/pages/fuel_monitoring_page.dart';
 import 'package:project_fuel/features/supplier/pages/maintenance_page.dart';
 import 'package:project_fuel/features/supplier/pages/theft_detection_page.dart';
 import 'package:project_fuel/features/supplier/pages/user_dashboard_page.dart';
@@ -31,6 +32,7 @@ class _SupplierScreenState extends State<SupplierScreen> {
     SupplierDashboard(onNavigate: _onNavigate),
     const UserDashboard(),
     const SupplierMaintenance(),
+    const SupplierFuelMonitoring(),
     const SupplierFleetTracking(),
     const SupplierTheftDetection(),
     const ProfileView(),
@@ -42,6 +44,7 @@ class _SupplierScreenState extends State<SupplierScreen> {
     SidebarXItem(icon: Icons.dashboard_outlined, label: 'Dashboard'),
     SidebarXItem(icon: Icons.people_outline, label: 'User Dashboard'),
     SidebarXItem(icon: Icons.build_outlined, label: 'Maintenance'),
+    SidebarXItem(icon: Icons.local_gas_station_outlined, label: 'Fuel Monitoring'),
     SidebarXItem(icon: Icons.map_outlined, label: 'Fleet Tracking'),
     SidebarXItem(icon: Icons.security_outlined, label: 'Theft Detection'),
   ];

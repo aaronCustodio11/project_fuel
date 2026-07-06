@@ -1,8 +1,14 @@
 import 'package:chartify/chartify.dart';
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:project_fuel/core/models/fleet_tracking.dart';
+import 'package:project_fuel/core/models/maintenance.dart';
 import 'package:project_fuel/core/routes/app_routes.dart';
 import 'package:project_fuel/core/services/authentication.dart';
+import 'package:project_fuel/core/services/json_reader.dart';
+import 'package:project_fuel/core/services/maintenance_service.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
+import 'package:project_fuel/shared/widgets/action_button.dart';
 
 class SupplierDashboard extends StatefulWidget {
   final void Function(int index)? onNavigate;
@@ -13,18 +19,54 @@ class SupplierDashboard extends StatefulWidget {
 }
 
 class _SupplierDashboardState extends State<SupplierDashboard> {
+  final _authService = AuthenticationService();
+
   AuthUser? _currentUser;
   String _selectedPeriod = 'Q2 2026';
+  bool _isLoading = true;
+
+  List<FleetTruck> _trucks = [];
+  List<MaintenanceRecord> _maintenanceRecords = [];
+  List<Map<String, dynamic>> _theftAlerts = [];
+  List<Map<String, dynamic>> _authUsers = [];
 
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    _loadData();
   }
 
-  Future<void> _loadUser() async {
-    final user = await AuthenticationService().getSavedUser();
-    if (mounted) setState(() => _currentUser = user);
+  Future<void> _loadData() async {
+    final results = await Future.wait([
+      _authService.getSavedUser(),
+      JsonReaderService.readListStatic('assets/mock_data/vehicles.json'),
+      JsonReaderService.readListStatic('assets/mock_data/stations.json'),
+      MaintenanceService().getRecords(),
+      JsonReaderService.readListStatic('assets/mock_data/theft_alerts.json'),
+      JsonReaderService.readListStatic('assets/mock_data/authentication.json'),
+    ]);
+
+    final user = results[0] as AuthUser?;
+    final vehicles = results[1] as List<dynamic>;
+    final maintenance = results[3] as List<MaintenanceRecord>;
+    final theftAlerts = results[4] as List<dynamic>;
+    final authUsers = results[5] as List<dynamic>;
+    final supplierId = user?.supplierId;
+
+    if (mounted) {
+      setState(() {
+        _currentUser = user;
+        _trucks = vehicles
+            .whereType<Map<String, dynamic>>()
+            .map((v) => FleetTruck.fromVehicleJson(v))
+            .where((t) => supplierId == null || t.supplierId == supplierId)
+            .toList();
+        _maintenanceRecords = maintenance;
+        _theftAlerts = theftAlerts.whereType<Map<String, dynamic>>().toList();
+        _authUsers = authUsers.cast<Map<String, dynamic>>();
+        _isLoading = false;
+      });
+    }
   }
 
   void _showPeriodPicker() {
@@ -69,6 +111,10 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
+    if (_isLoading) {
+      return Center(child: LoadingAnimationWidget.staggeredDotsWave(color: scheme.primary, size: 50));
+    }
+
     return Padding(
       padding: const EdgeInsets.all(FleetSpacing.xl),
       child: Column(
@@ -78,35 +124,11 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Dashboard', style: theme.textTheme.headlineLarge),
-              InkWell(
+              ActionButton(
+                icon: Icons.calendar_today,
+                label: _selectedPeriod,
+                color: scheme.primary,
                 onTap: _showPeriodPicker,
-                borderRadius: BorderRadius.circular(FleetRadius.sm),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: FleetSpacing.md,
-                    vertical: FleetSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: scheme.surface,
-                    borderRadius: BorderRadius.circular(FleetRadius.sm),
-                    border: Border.all(color: scheme.outline),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.calendar_today, size: 14, color: scheme.onSurfaceVariant),
-                      const SizedBox(width: FleetSpacing.sm),
-                      Text(
-                        _selectedPeriod,
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(width: FleetSpacing.xs),
-                      Icon(Icons.arrow_drop_down, size: 16, color: scheme.onSurfaceVariant),
-                    ],
-                  ),
-                ),
               ),
             ],
           ),
@@ -117,7 +139,9 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
                 children: [
                   _buildGreeting(context),
                   const SizedBox(height: FleetSpacing.lg),
-                  _buildKpiRow(context),
+                  _buildFleetKpiRow(context),
+                  const SizedBox(height: FleetSpacing.xl),
+                  _buildMonitoringKpiRow(context),
                   const SizedBox(height: FleetSpacing.xl),
                   SizedBox(height: 340, child: _buildChartsRow1(context)),
                   const SizedBox(height: FleetSpacing.xl),
@@ -192,153 +216,164 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
               ],
             ),
           ),
-          TextButton.icon(
-            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.profile),
-            icon: const Icon(Icons.person_outline, size: 18, color: Colors.white),
-            label: const Text('Go to Account Page'),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: Colors.white.withValues(alpha: 0.15),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(FleetRadius.sm),
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: FleetSpacing.md,
-                vertical: FleetSpacing.sm,
-              ),
-            ),
+          ActionButton(
+            icon: Icons.person_outline,
+            label: 'Go to Account',
+            color: Colors.white,
+            onTap: () => Navigator.of(context).pushNamed(AppRoutes.profile),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildKpiRow(BuildContext context) {
+  int get _pendingMaint => _maintenanceRecords.where((r) => r.status == MaintenanceStatus.pending).length;
+  int get _inProgressMaint => _maintenanceRecords.where((r) => r.status == MaintenanceStatus.inProgress).length;
+  int get _overdueMaint => _maintenanceRecords.where((r) => r.status == MaintenanceStatus.scheduled && r.scheduledDate != null && r.scheduledDate!.isBefore(DateTime.now())).length;
+  int get _completedMaint => _maintenanceRecords.where((r) => r.status == MaintenanceStatus.completed).length;
+
+  int _criticalAlerts() => _theftAlerts.where((a) {
+    final sev = a['severity'] as String?;
+    final resolved = a['isResolved'] as bool? ?? false;
+    return (sev == 'critical' || sev == 'high') && !resolved;
+  }).length;
+
+  List<Map<String, dynamic>> _recentUnresolvedAlerts() {
+    final unresolved = _theftAlerts.where((a) => (a['isResolved'] as bool? ?? false) == false).toList();
+    unresolved.sort((a, b) {
+      final ta = DateTime.tryParse(a['timestamp'] as String? ?? '') ?? DateTime.now();
+      final tb = DateTime.tryParse(b['timestamp'] as String? ?? '') ?? DateTime.now();
+      return tb.compareTo(ta);
+    });
+    return unresolved.take(4).toList();
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  Color _alertTypeIconColor(String type) => switch (type) {
+    'fuelTheft' => AppTheme.warningAmber,
+    'unauthorizedAccess' => AppTheme.dangerRed,
+    'gpsTampering' => AppTheme.accentBlue,
+    _ => AppTheme.brandBlue,
+  };
+
+  IconData _alertTypeIcon(String type) => switch (type) {
+    'fuelTheft' => Icons.local_gas_station_outlined,
+    'unauthorizedAccess' => Icons.lock_open,
+    'gpsTampering' => Icons.gps_fixed,
+    _ => Icons.alt_route,
+  };
+
+  String _alertSeverityLabel(String sev) => sev[0].toUpperCase() + sev.substring(1);
+
+  Widget _buildFleetKpiRow(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final moving = _trucks.where((t) => t.status == TruckStatus.moving).length;
+    final idle = _trucks.where((t) => t.status == TruckStatus.idle).length;
+    final maint = _trucks.where((t) => t.status == TruckStatus.maintenance).length;
+    final offDuty = _trucks.where((t) => t.status == TruckStatus.offDuty).length;
 
     return Row(
       children: [
         Expanded(child: _KpiCard(
-          label: 'Total Fleet',
-          value: '128',
-          subtitle: '12 in maintenance',
-          icon: Icons.local_shipping_outlined,
+          label: 'Total Trucks', value: '${_trucks.length}',
+          subtitle: 'In fleet', icon: Icons.local_shipping_outlined,
           accentColor: scheme.primary,
-          trend: '+3 this month',
-          trendUp: true,
+          trend: '$moving moving', trendUp: true,
         )),
         const SizedBox(width: FleetSpacing.md),
         Expanded(child: _KpiCard(
-          label: 'Active Drivers',
-          value: '96',
-          subtitle: '32 off duty',
-          icon: Icons.person_outline,
-          accentColor: AppTheme.accentBlue,
-          trend: '85% availability',
-          trendUp: true,
+          label: 'Moving', value: '$moving',
+          subtitle: 'On route', icon: Icons.arrow_forward,
+          accentColor: AppTheme.successGreen,
+          trend: '$idle idle', trendUp: true,
         )),
         const SizedBox(width: FleetSpacing.md),
         Expanded(child: _KpiCard(
-          label: 'Fuel Consumption',
-          value: '45.2K L',
-          subtitle: 'This month',
-          icon: Icons.local_gas_station_outlined,
+          label: 'Idle', value: '$idle',
+          subtitle: 'Available', icon: Icons.pause_circle_outline,
           accentColor: AppTheme.warningAmber,
-          trend: '-8% vs last month',
-          trendUp: false,
+          trend: '$offDuty off duty', trendUp: true,
         )),
         const SizedBox(width: FleetSpacing.md),
         Expanded(child: _KpiCard(
-          label: 'Open Tickets',
-          value: '18',
-          subtitle: '7 urgent',
-          icon: Icons.build_outlined,
+          label: 'In Maintenance', value: '$maint',
+          subtitle: 'In shop', icon: Icons.build_outlined,
           accentColor: AppTheme.dangerRed,
-          trend: '3 escalated',
-          trendUp: false,
+          trend: '$_overdueMaint overdue', trendUp: false,
+        )),
+      ],
+    );
+  }
+
+  Widget _buildMonitoringKpiRow(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final avgFuel = _trucks.fold<double>(0, (s, t) => s + (t.fuelLevel ?? 0)) / _trucks.length;
+    final lowFuel = _trucks.where((t) => (t.fuelLevel ?? 0) < 0.25).length;
+    final totalAlerts = _theftAlerts.length;
+    final critical = _criticalAlerts();
+
+    return Row(
+      children: [
+        Expanded(child: _KpiCard(
+          label: 'Avg Fuel Level', value: '${(avgFuel * 100).round()}%',
+          subtitle: 'Fleet average', icon: Icons.speed,
+          accentColor: scheme.primary,
+          trend: '$lowFuel low fuel', trendUp: lowFuel == 0,
+        )),
+        const SizedBox(width: FleetSpacing.md),
+        Expanded(child: _KpiCard(
+          label: 'Total Alerts', value: '$totalAlerts',
+          subtitle: 'All time', icon: Icons.warning_amber_rounded,
+          accentColor: AppTheme.dangerRed,
+          trend: '$critical critical', trendUp: critical == 0,
+        )),
+        const SizedBox(width: FleetSpacing.md),
+        Expanded(child: _KpiCard(
+          label: 'Pending Maint.', value: '$_pendingMaint',
+          subtitle: 'Awaiting review', icon: Icons.hourglass_empty_rounded,
+          accentColor: AppTheme.warningAmber,
+          trend: '$_inProgressMaint in progress', trendUp: true,
+        )),
+        const SizedBox(width: FleetSpacing.md),
+        Expanded(child: _KpiCard(
+          label: 'Completed Maint.', value: '$_completedMaint',
+          subtitle: 'This period', icon: Icons.check_circle_outline,
+          accentColor: AppTheme.successGreen,
+          trend: '$_overdueMaint overdue', trendUp: _overdueMaint == 0,
         )),
       ],
     );
   }
 
   Widget _buildChartsRow1(BuildContext context) {
+    final moving = _trucks.where((t) => t.status == TruckStatus.moving).length;
+    final idle = _trucks.where((t) => t.status == TruckStatus.idle).length;
+    final maint = _trucks.where((t) => t.status == TruckStatus.maintenance).length;
+    final offDuty = _trucks.where((t) => t.status == TruckStatus.offDuty).length;
+
+    final labels = _trucks.map((t) => t.name.replaceAll('Truck #', '')).toList();
+    final fuelValues = _trucks.map((t) => (t.fuelLevel ?? 0) * 100).toList();
+
     return Row(
       children: [
         Expanded(
           flex: 3,
           child: _ChartCard(
-            title: 'Fuel Consumption Trend',
-            subtitle: 'Monthly fuel usage in litres',
-            child: RepaintBoundary(
-              child: LineChart(
-                data: LineChartData(
-                  series: [
-                    LineSeries(
-                      name: 'Diesel',
-                      data: const [
-                        DataPoint(x: 0, y: 38),
-                        DataPoint(x: 1, y: 42),
-                        DataPoint(x: 2, y: 40),
-                        DataPoint(x: 3, y: 45),
-                        DataPoint(x: 4, y: 43),
-                        DataPoint(x: 5, y: 47),
-                        DataPoint(x: 6, y: 44),
-                        DataPoint(x: 7, y: 48),
-                      ],
-                      color: const Color(0xFF6366F1),
-                      curved: true,
-                      fillArea: true,
-                      areaOpacity: 0.15,
-                      showMarkers: true,
-                      strokeWidth: 2.5,
-                    ),
-                    LineSeries(
-                      name: 'Gasoline',
-                      data: const [
-                        DataPoint(x: 0, y: 22),
-                        DataPoint(x: 1, y: 25),
-                        DataPoint(x: 2, y: 23),
-                        DataPoint(x: 3, y: 28),
-                        DataPoint(x: 4, y: 26),
-                        DataPoint(x: 5, y: 30),
-                        DataPoint(x: 6, y: 27),
-                        DataPoint(x: 7, y: 32),
-                      ],
-                      color: const Color(0xFFF59E0B),
-                      curved: true,
-                      fillArea: true,
-                      areaOpacity: 0.15,
-                      showMarkers: true,
-                      strokeWidth: 2.5,
-                    ),
-                  ],
-                  xAxis: const AxisConfig(
-                    label: 'Month',
-                    type: AxisType.category,
-                  ),
-                  yAxis: const AxisConfig(label: 'Litres (K)', min: 0),
-                  showLegend: true,
-                  crosshairEnabled: true,
-                ),
-                tooltip: const TooltipConfig(enabled: true),
-                animation: const ChartAnimation.none(),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: FleetSpacing.md),
-        Expanded(
-          flex: 2,
-          child: _ChartCard(
             title: 'Fleet Status',
-            subtitle: 'Current vehicle states',
+            subtitle: '${_trucks.length} trucks',
             child: RepaintBoundary(
               child: BarChart(
                 data: BarChartData(
                   series: [
                     BarSeries.fromValues<double>(
-                      name: 'Vehicles',
-                      values: const [52, 28, 18, 30],
+                      name: 'Trucks',
+                      values: [moving.toDouble(), idle.toDouble(), maint.toDouble(), offDuty.toDouble()],
                       color: const Color(0xFF6366F1),
                       gradient: const LinearGradient(
                         colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
@@ -350,7 +385,39 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
                   xAxis: const BarXAxisConfig(
                     categories: ['Moving', 'Idle', 'Maintenance', 'Off Duty'],
                   ),
-                  yAxis: const BarYAxisConfig(min: 0),
+                  yAxis: const BarYAxisConfig(min: 0, tickCount: 4),
+                  grouping: BarGrouping.grouped,
+                  direction: BarDirection.vertical,
+                ),
+                tooltip: const TooltipConfig(enabled: true),
+                animation: const ChartAnimation.none(),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: FleetSpacing.md),
+        Expanded(
+          flex: 2,
+          child: _ChartCard(
+            title: 'Truck Fuel Levels',
+            subtitle: '${_trucks.length} trucks',
+            child: RepaintBoundary(
+              child: BarChart(
+                data: BarChartData(
+                  series: [
+                    BarSeries.fromValues<double>(
+                      name: 'Fuel %',
+                      values: fuelValues,
+                      color: const Color(0xFF2E6FE0),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2E6FE0), Color(0xFF5DE0FF)],
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                      ),
+                    ),
+                  ],
+                  xAxis: BarXAxisConfig(categories: labels),
+                  yAxis: const BarYAxisConfig(min: 0, max: 100),
                   grouping: BarGrouping.grouped,
                   direction: BarDirection.vertical,
                 ),
@@ -365,54 +432,88 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
   }
 
   Widget _buildChartsRow2(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final byType = <String, int>{};
+    for (final a in _theftAlerts) {
+      final t = a['type'] as String? ?? 'unknown';
+      byType[t] = (byType[t] ?? 0) + 1;
+    }
+    final typeLabels = byType.keys.map((k) {
+      if (k == 'fuelTheft') return 'Fuel Theft';
+      if (k == 'unauthorizedAccess') return 'Unath. Access';
+      if (k == 'gpsTampering') return 'GPS Tamper';
+      return 'Route Dev.';
+    }).toList();
+    final typeValues = byType.values.map((v) => v.toDouble()).toList();
+
+    final bySeverity = <String, int>{};
+    for (final a in _theftAlerts) {
+      final s = a['severity'] as String? ?? 'low';
+      bySeverity[s] = (bySeverity[s] ?? 0) + 1;
+    }
+    final severityColors = {
+      'critical': AppTheme.dangerRed,
+      'high': AppTheme.warningAmber,
+      'medium': AppTheme.accentBlue,
+      'low': AppTheme.neutralGray500,
+    };
+
+    final totalCost = _maintenanceRecords.fold<int>(0, (s, r) => s + r.cost.round());
+    final avgCost = _maintenanceRecords.isNotEmpty ? totalCost ~/ _maintenanceRecords.length : 0;
+    String fmt(int v) => '₱${v >= 1000 ? '${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}k' : '$v'}';
+
     return Row(
       children: [
         Expanded(
           child: _ChartCard(
-            title: 'Fleet Composition',
-            subtitle: 'By fuel type',
+            title: 'Alert Severity',
+            subtitle: '${_theftAlerts.length} alerts',
             child: RepaintBoundary(
               child: PieChart(
                 data: PieChartData(
-                  sections: [
-                    PieSection(
-                      value: 58,
-                      label: 'Diesel',
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                      ),
-                      shadowElevation: 4,
-                    ),
-                    const PieSection(
-                      value: 25,
-                      label: 'Gasoline',
-                      color: Color(0xFFF59E0B),
-                    ),
-                    const PieSection(
-                      value: 12,
-                      label: 'Electric',
-                      color: Color(0xFF10B981),
-                    ),
-                    const PieSection(
-                      value: 5,
-                      label: 'Hybrid',
-                      color: Color(0xFFEC4899),
-                    ),
-                  ],
+                  sections: bySeverity.entries.where((e) => e.value > 0).map((e) => PieSection(
+                    value: e.value.toDouble(),
+                    label: _alertSeverityLabel(e.key),
+                    color: severityColors[e.key]!,
+                  )).toList(),
                   holeRadius: 0.45,
                   segmentGap: 2,
-                  cornerRadius: 4,
-                  enableShadows: true,
                   showLabels: true,
                   labelPosition: PieLabelPosition.outside,
                   labelConnector: PieLabelConnector.elbow,
                 ),
-                centerWidget: const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('128', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
-                    Text('Total', style: TextStyle(fontSize: 11)),
+                centerWidget: Text('${_theftAlerts.length}',
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+                tooltip: const TooltipConfig(enabled: true),
+                animation: const ChartAnimation.none(),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: FleetSpacing.md),
+        Expanded(
+          child: _ChartCard(
+            title: 'Alerts by Type',
+            subtitle: 'Breakdown',
+            child: RepaintBoundary(
+              child: BarChart(
+                data: BarChartData(
+                  series: [
+                    BarSeries.fromValues<double>(
+                      name: 'Alerts',
+                      values: typeValues,
+                      color: const Color(0xFFEF4444),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFEF4444), Color(0xFFF87171)],
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                      ),
+                    ),
                   ],
+                  xAxis: BarXAxisConfig(categories: typeLabels),
+                  yAxis: const BarYAxisConfig(min: 0, tickCount: 4),
+                  grouping: BarGrouping.grouped,
+                  direction: BarDirection.vertical,
                 ),
                 tooltip: const TooltipConfig(enabled: true),
                 animation: const ChartAnimation.none(),
@@ -423,167 +524,41 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
         const SizedBox(width: FleetSpacing.md),
         Expanded(
           child: _ChartCard(
-            title: 'Revenue vs Operating Costs',
-            subtitle: 'Monthly overview',
-            child: RepaintBoundary(
-              child: AreaChart(
-                data: AreaChartData(
-                  series: [
-                    AreaSeries(
-                      name: 'Revenue',
-                      data: const [
-                        DataPoint(x: 0, y: 180),
-                        DataPoint(x: 1, y: 220),
-                        DataPoint(x: 2, y: 195),
-                        DataPoint(x: 3, y: 250),
-                        DataPoint(x: 4, y: 230),
-                        DataPoint(x: 5, y: 270),
-                        DataPoint(x: 6, y: 245),
-                        DataPoint(x: 7, y: 290),
-                      ],
-                      color: const Color(0xFF22C55E),
-                      fillOpacity: 0.2,
-                    ),
-                    AreaSeries(
-                      name: 'Costs',
-                      data: const [
-                        DataPoint(x: 0, y: 140),
-                        DataPoint(x: 1, y: 160),
-                        DataPoint(x: 2, y: 155),
-                        DataPoint(x: 3, y: 180),
-                        DataPoint(x: 4, y: 170),
-                        DataPoint(x: 5, y: 195),
-                        DataPoint(x: 6, y: 185),
-                        DataPoint(x: 7, y: 210),
-                      ],
-                      color: const Color(0xFFEF4444),
-                      fillOpacity: 0.2,
-                    ),
-                  ],
-                  stacked: false,
-                ),
-                animation: const ChartAnimation.none(),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBottomRow(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 3,
-          child: _ChartCard(
-            title: 'Recent Alerts & Theft Detection',
-            subtitle: 'Last 7 days',
+            title: 'Maintenance Cost',
+            subtitle: '${_maintenanceRecords.length} requests',
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        _AlertTile(
-                          icon: Icons.warning_amber_rounded,
-                          iconColor: AppTheme.warningAmber,
-                          title: 'Unauthorized fuel access',
-                          subtitle: 'Truck #FL-2042 - 30L discrepancy',
-                          time: '2 hours ago',
-                          priority: 'High',
-                        ),
-                        const Divider(height: 1),
-                        _AlertTile(
-                          icon: Icons.gps_fixed,
-                          iconColor: AppTheme.dangerRed,
-                          title: 'GPS signal loss',
-                          subtitle: 'Truck #FL-1078 - last ping 4h ago',
-                          time: '4 hours ago',
-                          priority: 'Critical',
-                        ),
-                        const Divider(height: 1),
-                        _AlertTile(
-                          icon: Icons.speed,
-                          iconColor: AppTheme.accentBlue,
-                          title: 'Route deviation detected',
-                          subtitle: 'Truck #FL-3091 - 15km off route',
-                          time: '6 hours ago',
-                          priority: 'Medium',
-                        ),
-                        const Divider(height: 1),
-                        _AlertTile(
-                          icon: Icons.local_gas_station_outlined,
-                          iconColor: AppTheme.warningAmber,
-                          title: 'Fuel theft attempt',
-                          subtitle: 'Station #ST-005 - after hours refuel',
-                          time: '1 day ago',
-                          priority: 'High',
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: FleetSpacing.md),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => widget.onNavigate?.call(4),
-                    child: const Text('View All Alerts'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: FleetSpacing.md),
-        Expanded(
-          flex: 2,
-          child: _ChartCard(
-            title: 'Maintenance Overview',
-            subtitle: 'Pending & in-progress',
-            child: Column(
-              children: [
-                _MaintenanceSummary(
-                  label: 'Scheduled',
-                  count: 8,
-                  color: AppTheme.accentBlue,
-                ),
-                const SizedBox(height: FleetSpacing.sm),
-                _MaintenanceSummary(
-                  label: 'In Progress',
-                  count: 5,
-                  color: AppTheme.warningAmber,
-                ),
-                const SizedBox(height: FleetSpacing.sm),
-                _MaintenanceSummary(
-                  label: 'Overdue',
-                  count: 3,
-                  color: AppTheme.dangerRed,
-                ),
-                const SizedBox(height: FleetSpacing.sm),
-                _MaintenanceSummary(
-                  label: 'Completed this month',
-                  count: 14,
-                  color: AppTheme.successGreen,
-                ),
-                const SizedBox(height: FleetSpacing.xl),
                 Row(
                   children: [
                     _MiniStatCard(
-                      label: 'Avg. Repair Time',
-                      value: '2.4 days',
-                      icon: Icons.timer_outlined,
-                      color: AppTheme.accentBlue,
+                      label: 'Total Spent', value: fmt(totalCost),
+                      icon: Icons.account_balance_wallet_outlined, color: scheme.primary,
                     ),
                     const SizedBox(width: FleetSpacing.sm),
                     _MiniStatCard(
-                      label: 'Parts Cost',
-                      value: '\$8.2K',
-                      icon: Icons.monetization_on_outlined,
-                      color: AppTheme.warningAmber,
+                      label: 'Avg per Request', value: fmt(avgCost),
+                      icon: Icons.bar_chart_outlined, color: AppTheme.accentBlue,
                     ),
                   ],
+                ),
+                const SizedBox(height: FleetSpacing.md),
+                Expanded(
+                  child: _MaintenanceSummary(
+                    label: 'Pending', count: _pendingMaint, color: AppTheme.warningAmber,
+                  ),
+                ),
+                const SizedBox(height: FleetSpacing.sm),
+                _MaintenanceSummary(
+                  label: 'In Progress', count: _inProgressMaint, color: AppTheme.warningAmber,
+                ),
+                const SizedBox(height: FleetSpacing.sm),
+                _MaintenanceSummary(
+                  label: 'Overdue', count: _overdueMaint, color: AppTheme.dangerRed,
+                ),
+                const SizedBox(height: FleetSpacing.sm),
+                _MaintenanceSummary(
+                  label: 'Completed', count: _completedMaint, color: AppTheme.successGreen,
                 ),
                 const SizedBox(height: FleetSpacing.md),
                 SizedBox(
@@ -598,6 +573,123 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBottomRow(BuildContext context) {
+    final unresolved = _recentUnresolvedAlerts();
+
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: _ChartCard(
+            title: 'Recent Alerts',
+            subtitle: 'Latest unresolved',
+            child: Column(
+              children: [
+                Expanded(
+                  child: unresolved.isEmpty
+                      ? Center(child: Text('No unresolved alerts.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant)))
+                      : ListView.separated(
+                          itemCount: unresolved.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (_, i) {
+                            final a = unresolved[i];
+                            final type = a['type'] as String? ?? '';
+                            final severity = a['severity'] as String? ?? 'medium';
+                            final ts = DateTime.tryParse(a['timestamp'] as String? ?? '') ?? DateTime.now();
+                            final vehicleId = a['vehicleId'] as String? ?? '';
+                            final desc = a['description'] as String? ?? '';
+                            return _AlertTile(
+                              icon: _alertTypeIcon(type),
+                              iconColor: _alertTypeIconColor(type),
+                              title: type.replaceAllMapped(
+                                RegExp(r'[A-Z]'),
+                                (m) => ' ${m.group(0)}',
+                              ).trim(),
+                              subtitle: '$vehicleId — $desc',
+                              time: _timeAgo(ts),
+                              priority: _alertSeverityLabel(severity),
+                            );
+                          },
+                        ),
+                ),
+                const SizedBox(height: FleetSpacing.md),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => widget.onNavigate?.call(5),
+                    child: const Text('View All Alerts'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: FleetSpacing.md),
+        Expanded(
+          flex: 2,
+          child: _ChartCard(
+            title: 'User Overview',
+            subtitle: 'People in your organization',
+            child: Column(
+              children: [
+                Expanded(
+                  child: _buildUserDonut(context),
+                ),
+                const SizedBox(height: FleetSpacing.md),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => widget.onNavigate?.call(1),
+                    child: const Text('Manage Users'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUserDonut(BuildContext context) {
+    int countBy(String role) => _authUsers.where((u) => u['role'] == role).length;
+    final managers = countBy('Manager');
+    final drivers = countBy('Driver');
+    final suppliers = countBy('Supplier');
+    final total = managers + drivers + suppliers;
+
+    return RepaintBoundary(
+      child: PieChart(
+        data: PieChartData(
+          sections: [
+            if (managers > 0)
+              PieSection(value: managers.toDouble(), label: 'Managers', color: AppTheme.accentBlue),
+            if (drivers > 0)
+              PieSection(value: drivers.toDouble(), label: 'Drivers', color: AppTheme.warningAmber),
+            if (suppliers > 0)
+              PieSection(value: suppliers.toDouble(), label: 'Suppliers', color: AppTheme.brandBlueDark),
+          ],
+          holeRadius: 0.45,
+          segmentGap: 2,
+          showLabels: true,
+          labelPosition: PieLabelPosition.outside,
+          labelConnector: PieLabelConnector.elbow,
+        ),
+        centerWidget: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('$total', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+            const Text('Users', style: TextStyle(fontSize: 11)),
+          ],
+        ),
+        tooltip: const TooltipConfig(enabled: true),
+        animation: const ChartAnimation.none(),
+      ),
     );
   }
 }

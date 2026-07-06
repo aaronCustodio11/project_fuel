@@ -10,6 +10,7 @@ import 'package:project_fuel/core/services/deliveries.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/services/osrm_routing.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
+import 'package:project_fuel/shared/widgets/action_button.dart';
 import 'package:project_fuel/shared/widgets/role_badge.dart';
 
 class SupplierFleetTracking extends StatefulWidget {
@@ -76,7 +77,38 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
             : null;
         _isLoading = false;
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _fitMapToMarkers());
     }
+  }
+
+  void _fitMapToMarkers() {
+    final positions = <LatLng>[
+      ..._trucks.where((t) => t.position.latitude != 0 || t.position.longitude != 0).map((t) => t.position),
+      ..._stations.map((s) => s.position),
+      ?_userPosition,
+    ];
+    if (positions.isEmpty) return;
+    double minLat = positions.first.latitude;
+    double maxLat = positions.first.latitude;
+    double minLng = positions.first.longitude;
+    double maxLng = positions.first.longitude;
+    for (final p in positions) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+    final latPad = (maxLat - minLat) * 0.3;
+    final lngPad = (maxLng - minLng) * 0.3;
+    _mapController.fitCamera(
+      CameraFit.bounds(
+        bounds: LatLngBounds(
+          LatLng(minLat - latPad, minLng - lngPad),
+          LatLng(maxLat + latPad, maxLng + lngPad),
+        ),
+        padding: const EdgeInsets.all(40),
+      ),
+    );
   }
 
   String _driverName(int? id) {
@@ -236,14 +268,14 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
                 Text('Fleet Tracking', style: theme.textTheme.headlineLarge),
                 Row(
                   children: [
-                    _ActionButton(
+                    ActionButton(
                       icon: Icons.add_location_outlined,
                       label: 'Add Location',
                       color: scheme.primary,
                       onTap: _showAddLocationSheet,
                     ),
                     const SizedBox(width: FleetSpacing.sm),
-                    _ActionButton(
+                    ActionButton(
                       icon: Icons.notifications_outlined,
                       label: 'Notify Truck',
                       color: AppTheme.accentBlue,
@@ -353,7 +385,7 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
         height: size,
         child: RoleBadge(
           icon: isGas ? Icons.local_gas_station_rounded : Icons.warehouse_outlined,
-          color: isGas ? AppTheme.accentBlue : AppTheme.brandGreen,
+          color: isGas ? AppTheme.accentBlue : AppTheme.brandBlue,
           onTap: () => _onItemTap(station),
           borderWidth: selected ? 4 : 3,
           glowOpacity: selected ? 0.6 : 0.4,
@@ -880,7 +912,7 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
               Expanded(child: _KpiCard(
                 label: 'Est. Range', value: '$estRange km',
                 subtitle: 'Fleet average', icon: Icons.route,
-                accentColor: AppTheme.brandGreen,
+                accentColor: AppTheme.brandBlue,
               )),
             ],
           ),
@@ -1202,41 +1234,6 @@ class _KpiCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(subtitle, style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
         ],
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ActionButton({required this.icon, required this.label, required this.color, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(FleetRadius.sm),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: FleetSpacing.md, vertical: FleetSpacing.sm),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(FleetRadius.sm),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: FleetSpacing.xs),
-            Text(label, style: theme.textTheme.labelLarge?.copyWith(color: color, fontWeight: FontWeight.w600)),
-          ],
-        ),
       ),
     );
   }
@@ -1821,7 +1818,7 @@ class _StationDetail extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isGas = station.type == StationType.gasStation;
-    final color = isGas ? AppTheme.accentBlue : AppTheme.brandGreen;
+    final color = isGas ? AppTheme.accentBlue : AppTheme.brandBlue;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(FleetSpacing.lg),

@@ -655,7 +655,7 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
           subtitle: 'Past scheduled date',
           icon: Icons.warning_amber_outlined,
           accentColor: AppTheme.dangerRed,
-          trend: '$overdue needs attention',
+          trend: '$overdue overdue',
           trendUp: false,
         )),
         const SizedBox(width: FleetSpacing.md),

@@ -168,7 +168,7 @@ class _SupplierTheftDetectionState extends State<SupplierTheftDetection> {
     TheftAlertType.fuelTheft => AppTheme.warningAmber,
     TheftAlertType.unauthorizedAccess => AppTheme.dangerRed,
     TheftAlertType.gpsTampering => AppTheme.accentBlue,
-    TheftAlertType.routeDeviation => AppTheme.brandGreen,
+    TheftAlertType.routeDeviation => AppTheme.brandBlue,
   };
 
   Color _severityColor(TheftAlertSeverity s) => switch (s) {

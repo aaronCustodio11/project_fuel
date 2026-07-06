@@ -4,14 +4,14 @@ import 'package:google_fonts/google_fonts.dart';
 class AppTheme {
   AppTheme._();
 
-  static const Color brandGreen = Color(0xFF1E8E4A);
-  static const Color brandGreenDark = Color(0xFF166238);
+  static const Color brandBlue = Color(0xFF2E6FE0);
+  static const Color brandBlueDark = Color(0xFF1B4DB5);
   static const Color navyDeep = Color(0xFF0F2942);
   static const Color navyMid = Color(0xFF1B3A5C);
   static const Color accentBlue = Color(0xFF2E6FE0);
   static const Color dangerRed = Color(0xFFD93025);
   static const Color warningAmber = Color(0xFFF5A623);
-  static const Color successGreen = Color(0xFF1E8E4A);
+  static const Color successGreen = Color(0xFF2E6FE0);
   static const Color neutralGray900 = Color(0xFF1A1D21);
   static const Color neutralGray500 = Color(0xFF6B7280);
   static const Color neutralGray200 = Color(0xFFE5E7EB);
@@ -100,10 +100,10 @@ class AppTheme {
 
   static const _lightScheme = ColorScheme(
     brightness: Brightness.light,
-    primary: Color(0xFF1E8E4A),
+    primary: Color(0xFF2E6FE0),
     onPrimary: Color(0xFFFFFFFF),
-    primaryContainer: Color(0xFFDCF3E4),
-    onPrimaryContainer: Color(0xFF0B4423),
+    primaryContainer: Color(0xFFD6E4FC),
+    onPrimaryContainer: Color(0xFF001B5E),
     secondary: Color(0xFF2E6FE0),
     onSecondary: Color(0xFFFFFFFF),
     secondaryContainer: Color(0xFFE3ECFC),
@@ -128,18 +128,18 @@ class AppTheme {
     outlineVariant: Color(0xFFEFF0F2),
     inverseSurface: Color(0xFF0F2942),
     onInverseSurface: Color(0xFFF7F8FA),
-    inversePrimary: Color(0xFF7FD79B),
+    inversePrimary: Color(0xFF5DE0FF),
     shadow: Color(0xFF000000),
     scrim: Color(0xFF000000),
-    surfaceTint: Color(0xFF1E8E4A),
+    surfaceTint: Color(0xFF2E6FE0),
   );
 
   static const _darkScheme = ColorScheme(
     brightness: Brightness.dark,
-    primary: Color(0xFF4CBB78),
-    onPrimary: Color(0xFF0B2A17),
-    primaryContainer: Color(0xFF1D5A38),
-    onPrimaryContainer: Color(0xFFC3EED2),
+    primary: Color(0xFF5DE0FF),
+    onPrimary: Color(0xFF003F55),
+    primaryContainer: Color(0xFF005577),
+    onPrimaryContainer: Color(0xFFB5F5FF),
     secondary: Color(0xFF7AA6F2),
     onSecondary: Color(0xFF0B234F),
     secondaryContainer: Color(0xFF1E3A6E),
@@ -164,10 +164,10 @@ class AppTheme {
     outlineVariant: Color(0xFF1E3A5A),
     inverseSurface: Color(0xFFE7EAEE),
     onInverseSurface: Color(0xFF0F2942),
-    inversePrimary: Color(0xFF1E8E4A),
+    inversePrimary: Color(0xFF2E6FE0),
     shadow: Color(0xFF000000),
     scrim: Color(0xFF000000),
-    surfaceTint: Color(0xFF4CBB78),
+    surfaceTint: Color(0xFF5DE0FF),
   );
 
   static final _textTheme = TextTheme(
@@ -260,22 +260,22 @@ class FleetStatusColors extends ThemeExtension<FleetStatusColors> {
   final Color criticalBg;
 
   static const light = FleetStatusColors(
-    moving: Color(0xFF1E8E4A),
+    moving: Color(0xFF2E6FE0),
     stopped: Color(0xFFD93025),
     warning: Color(0xFFB5790E),
     critical: Color(0xFFD93025),
-    movingBg: Color(0xFFDCF3E4),
+    movingBg: Color(0xFFD6E4FC),
     stoppedBg: Color(0xFFFAD9D6),
     warningBg: Color(0xFFFCEACB),
     criticalBg: Color(0xFFFAD9D6),
   );
 
   static const dark = FleetStatusColors(
-    moving: Color(0xFF4CBB78),
+    moving: Color(0xFF5DE0FF),
     stopped: Color(0xFFEE6C60),
     warning: Color(0xFFF7BE5C),
     critical: Color(0xFFEE6C60),
-    movingBg: Color(0xFF1D5A38),
+    movingBg: Color(0xFF005577),
     stoppedBg: Color(0xFF7A241D),
     warningBg: Color(0xFF5C4110),
     criticalBg: Color(0xFF7A241D),
