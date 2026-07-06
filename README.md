@@ -43,6 +43,9 @@ lib/
 │   ├── manager/
 │   │   ├── manager_screen.dart        # Shell with sidebar + IndexedStack
 │   │   └── pages/
+│   │       ├── dashboard_page.dart
+│   │       ├── fuel_monitoring_page.dart
+│   │       └── theft_detection_page.dart
 │   ├── profile/
 │   │   └── pages/
 │   │       └── profile_page.dart      # Account, appearance, logout
@@ -65,10 +68,12 @@ lib/
         └── sidebar.dart               # Collapsible sidebar with items prop
 
 assets/
+├── images/
+│   └── Onboarding/                    # 9 intro screenshots (Supplier, Driver, Manager)
 └── mock_data/
     ├── authentication.json            # 10 users (drivers, managers, suppliers)
     ├── deliveries.json                # 8 deliveries (truckId + stationId FK)
-    ├── maintenance.json               # 12 records (assignedToId FK)
+    ├── maintenance.json               # 14 records (assignedToId FK)
     ├── stations.json                  # 12 stations in Batangas area
     ├── theft_alerts.json              # 7 alerts (vehicleId FK)
     └── vehicles.json                  # 9 trucks (fuelLevel, driverId nullable)
@@ -82,10 +87,12 @@ assets/
 |-------|--------|------|
 | `/splash` | `SplashPage` | — |
 | `/login` | `LoginPage` | — |
-| `/driver/home` | `DriverScreen` (bottom nav: Map, Deliveries, Maintenance) | Driver |
+| `/register` | `PlaceholderPage` | — |
+| `/driver/home` | `DriverScreen` (bottom nav: Map, Maintenance, Deliveries, Profile) | Driver |
 | `/manager/home` | `ManagerScreen` (sidebar: Dashboard, Fuel Monitoring, Theft Detection) | Manager |
 | `/supplier/home` | `SupplierScreen` (sidebar: Dashboard, Users, Maintenance, Fleet, Theft) | Supplier |
 | `/profile` | `ProfilePage` | All |
+| `/settings` | `PlaceholderPage` | All |
 
 ---
 
@@ -114,7 +121,7 @@ All data is read from `assets/mock_data/`:
 | `vehicles.json` | 9 trucks with `supplierId`, `driverId` (nullable), `fuelLevel`, status | `truckId` ← `deliveries.truckId`, `theft_alerts.vehicleId` |
 | `stations.json` | 12 fuel stations in Batangas area with `supplierId`, capacity, stock | `stationId` ← `deliveries.stationId` |
 | `deliveries.json` | 8 deliveries with `truckId`, `stationId`, product, quantity | FK: `truckId` → `vehicles.truckId`, `stationId` → `stations.stationId` |
-| `maintenance.json` | 12 service records with `vehicleId`, `assignedToId` (driver/manager) | FK: `assignedToId` → `authentication.id` |
+| `maintenance.json` | 14 service records with `vehicleId`, `assignedToId` (driver/manager) | FK: `assignedToId` → `authentication.id` |
 | `theft_alerts.json` | 7 theft alerts with `vehicleId`, Batangas-area coordinates | FK: `vehicleId` → `vehicles.truckId` |
 
 No backend or real database is required.
