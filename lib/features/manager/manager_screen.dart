@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project_fuel/features/manager/pages/dashboard_page.dart';
+import 'package:project_fuel/features/manager/pages/fleet_tracking_page.dart';
 import 'package:project_fuel/features/manager/pages/fuel_monitoring_page.dart';
 import 'package:project_fuel/features/manager/pages/theft_detection_page.dart';
 import 'package:project_fuel/features/profile/pages/profile_page.dart';
@@ -17,11 +18,12 @@ class ManagerScreen extends StatefulWidget {
 class _ManagerScreenState extends State<ManagerScreen> {
   int _selectedIndex = 0;
 
-  late final List<Widget> _pages = const [
-    ManagerDashboard(),
-    ManagerFuelMonitoring(),
-    ManagerTheftDetection(),
-    ProfileView(),
+  late final List<Widget> _pages = [
+    ManagerDashboard(onNavigate: (i) => setState(() => _selectedIndex = i)),
+    const ManagerFuelMonitoring(),
+    const ManagerFleetTracking(),
+    const ManagerTheftDetection(),
+    const ProfileView(),
   ];
 
   @override
@@ -35,6 +37,7 @@ class _ManagerScreenState extends State<ManagerScreen> {
   static const _sidebarItems = [
     SidebarXItem(icon: Icons.dashboard_outlined, label: 'Dashboard'),
     SidebarXItem(icon: Icons.local_gas_station_outlined, label: 'Fuel Monitoring'),
+    SidebarXItem(icon: Icons.map_outlined, label: 'Fleet Tracking'),
     SidebarXItem(icon: Icons.security_outlined, label: 'Theft Detection'),
   ];
 

@@ -112,8 +112,8 @@ class _SidebarState extends State<Sidebar> {
         color: fg.withValues(alpha: 0.7),
         size: 20,
       ),
-      selectedIconTheme: const IconThemeData(
-        color: AppTheme.successGreen,
+      selectedIconTheme: IconThemeData(
+        color: scheme.primary,
         size: 20,
       ),
       itemMargin: const EdgeInsets.symmetric(
@@ -155,10 +155,10 @@ class _SidebarState extends State<Sidebar> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 18,
-              backgroundColor: AppTheme.successGreen,
-              child: Icon(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              child: const Icon(
                 Icons.local_shipping_outlined,
                 color: Colors.white,
                 size: 18,
@@ -236,7 +236,7 @@ class _AccountButtonState extends State<_AccountButton> {
     final showHighlight = widget.isSelected || _isHovered;
     final bg = showHighlight ? scheme.surfaceContainerHighest : Colors.transparent;
     final iconColor = widget.isSelected
-        ? AppTheme.successGreen
+        ? scheme.primary
         : fg.withValues(alpha: 0.7);
     final textWeight = widget.isSelected ? FontWeight.w600 : FontWeight.w400;
 

@@ -4,6 +4,7 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
+import 'package:project_fuel/shared/widgets/action_button.dart';
 
 String? _coerceStringValue(Object? value) {
   if (value == null) return null;
@@ -323,13 +324,11 @@ class _UserDashboardState extends State<UserDashboard> {
                   'User Management',
                   style: Theme.of(context).textTheme.headlineLarge,
                 ),
-                FilledButton.icon(
-                  onPressed: _openAddDialog,
-                  icon: const Icon(Icons.person_add_alt_1, size: 18),
-                  label: const Text('Add User'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                  ),
+                ActionButton(
+                  icon: Icons.person_add_alt_1,
+                  label: 'Add User',
+                  color: Theme.of(context).colorScheme.primary,
+                  onTap: _openAddDialog,
                 ),
               ],
             ),
@@ -388,7 +387,7 @@ class _UserDashboardState extends State<UserDashboard> {
             label: 'Suppliers',
             value: _countByRole('Supplier').toString(),
             icon: Icons.inventory_2_outlined,
-            accentColor: AppTheme.brandGreenDark,
+            accentColor: AppTheme.brandBlueDark,
           ),
         ),
       ],
@@ -441,7 +440,7 @@ class _UserDashboardState extends State<UserDashboard> {
                       PieSection(
                         value: suppliers,
                         label: 'Suppliers',
-                        color: AppTheme.brandGreenDark,
+                        color: AppTheme.brandBlueDark,
                       ),
                   ],
                   segmentGap: 2,
