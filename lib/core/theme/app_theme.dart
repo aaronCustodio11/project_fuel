@@ -219,20 +219,25 @@ class ThemeProvider extends InheritedNotifier<ValueNotifier<ThemeMode>> {
   }) : super(notifier: notifier);
 
   static ThemeMode read(BuildContext context) {
-    final provider = context.dependOnInheritedWidgetOfExactType<ThemeProvider>();
+    final provider = context
+        .dependOnInheritedWidgetOfExactType<ThemeProvider>();
     assert(provider != null, 'No ThemeProvider found in context');
     return provider!.notifier!.value;
   }
 
   static void toggle(BuildContext context) {
-    final provider = context.dependOnInheritedWidgetOfExactType<ThemeProvider>();
+    final provider = context
+        .dependOnInheritedWidgetOfExactType<ThemeProvider>();
     assert(provider != null, 'No ThemeProvider found in context');
     final notifier = provider!.notifier!;
-    notifier.value = notifier.value == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+    notifier.value = notifier.value == ThemeMode.light
+        ? ThemeMode.dark
+        : ThemeMode.light;
   }
 
   static void setThemeMode(BuildContext context, ThemeMode mode) {
-    final provider = context.dependOnInheritedWidgetOfExactType<ThemeProvider>();
+    final provider = context
+        .dependOnInheritedWidgetOfExactType<ThemeProvider>();
     assert(provider != null, 'No ThemeProvider found in context');
     provider!.notifier!.value = mode;
   }
