@@ -85,7 +85,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Get a complete overview of your supply operations. View key '
           'metrics, active deliveries, and system alerts at a glance.',
       imagePath:
-          'assets/images/Onboarding/IntroDashboardSupplier.jpg',
+          'assets/images/Onboarding/supplier/IntroDashboardSupplier.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.people_outline,
@@ -94,7 +94,17 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Manage all users across your supply network. Assign roles, '
           'track activity, and control access permissions.',
       imagePath:
-          'assets/images/Onboarding/IntroUserDashboardSupplier.jpg',
+          'assets/images/Onboarding/supplier/IntroUserDashboardSupplier.jpg',
+    ),
+    _OnboardingPageData(
+      icon: Icons.local_gas_station_outlined,
+      title: 'Fuel Monitoring',
+      description:
+          'Monitor fuel tank levels across your network in real time. '
+          'Track inventory, detect low-stock conditions, and manage '
+          'fuel distribution efficiently.',
+      imagePath:
+          'assets/images/Onboarding/supplier/IntroFuelMonitoringSupplier.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.build_outlined,
@@ -103,7 +113,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Schedule and track maintenance for your entire fleet. Get '
           'service reminders and maintain detailed repair histories.',
       imagePath:
-          'assets/images/Onboarding/IntroMaintenanceSupplier.jpg',
+          'assets/images/Onboarding/supplier/IntroMaintenanceSupplier.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.map_outlined,
@@ -112,7 +122,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Monitor your tanker trucks in real time with live GPS tracking. '
           'View routes, ETAs, and optimize delivery schedules.',
       imagePath:
-          'assets/images/Onboarding/IntroFleetTrackingSupplier.jpg',
+          'assets/images/Onboarding/supplier/IntroFleetTrackingSupplier.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.security_outlined,
@@ -121,7 +131,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Protect your fuel assets with intelligent monitoring. Detect '
           'unauthorized access and unusual activity instantly.',
       imagePath:
-          'assets/images/Onboarding/IntroTheftDetectionSupplier.jpg',
+          'assets/images/Onboarding/supplier/IntroTheftDetectionSupplier.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.settings_outlined,
@@ -146,7 +156,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'View key performance indicators for your station. Track fuel '
           'inventory, sales metrics, and operational status at a glance.',
       imagePath:
-          'assets/images/Onboarding/IntroDashboardSupplier.jpg',
+          'assets/images/Onboarding/manager/IntroDashboardManager.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.local_gas_station_outlined,
@@ -154,6 +164,17 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
       description:
           'Monitor fuel tank levels, dispensed volumes, and inventory in '
           'real time. Get low-stock alerts and track consumption patterns.',
+      imagePath:
+          'assets/images/Onboarding/manager/IntroFuelMonitoringManager.jpg',
+    ),
+    _OnboardingPageData(
+      icon: Icons.map_outlined,
+      title: 'Fleet Tracking',
+      description:
+          'Track your tanker trucks in real time with live GPS monitoring. '
+          'View routes, ETAs, and optimize station deliveries.',
+      imagePath:
+          'assets/images/Onboarding/manager/IntroFleetTrackingManager.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.security_outlined,
@@ -162,7 +183,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Detect and prevent fuel theft with smart monitoring systems. '
           'Receive instant alerts on suspicious activity.',
       imagePath:
-          'assets/images/Onboarding/IntroTheftDetectionSupplier.jpg',
+          'assets/images/Onboarding/manager/IntroTheftDetectionManager.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.settings_outlined,
@@ -187,7 +208,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'View your assigned routes and navigate to delivery locations '
           'with real-time GPS tracking and turn-by-turn directions.',
       imagePath:
-          'assets/images/Onboarding/IntroMapDriver.jpg',
+          'assets/images/Onboarding/driver/IntroMapDriver.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.build_outlined,
@@ -196,7 +217,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Keep your truck in top condition. View maintenance schedules, '
           'report issues, and track service history.',
       imagePath:
-          'assets/images/Onboarding/IntroMaintenanceDriver.jpg',
+          'assets/images/Onboarding/driver/IntroMaintenanceDriver.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.route_outlined,
@@ -204,6 +225,8 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
       description:
           'View your delivery schedule, check order details, and update '
           'delivery statuses in real time.',
+      imagePath:
+          'assets/images/Onboarding/driver/IntroDeliveriesDriver.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.person_outline,
@@ -212,7 +235,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Manage your account settings, view your schedule, and update '
           'personal information from your profile.',
       imagePath:
-          'assets/images/Onboarding/IntroAccountDriver.jpg',
+          'assets/images/Onboarding/driver/IntroAccountDriver.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.settings_outlined,

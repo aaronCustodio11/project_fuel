@@ -76,6 +76,10 @@ flutter:
   - assets/mock_data/theft_alerts.json
   - assets/mock_data/vehicles.json
   - assets/images/Onboarding/
+  - assets/images/Onboarding/supplier/
+  - assets/images/Onboarding/manager/
+  - assets/images/Onboarding/driver/
+  - assets/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
