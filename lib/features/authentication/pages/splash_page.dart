@@ -53,10 +53,11 @@ class _SplashScreenPageState extends State<SplashScreenPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.local_gas_station,
-                size: 88,
-                color: scheme.onPrimary,
+              Image.asset(
+                'assets/images/logo/logo.jpg',
+                width: 88,
+                height: 88,
+                fit: BoxFit.contain,
               ),
               const SizedBox(height: FleetSpacing.lg),
               Text(

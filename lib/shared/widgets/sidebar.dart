@@ -155,13 +155,13 @@ class _SidebarState extends State<Sidebar> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              child: const Icon(
-                Icons.local_shipping_outlined,
-                color: Colors.white,
-                size: 18,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: Image.asset(
+                'assets/images/logo/logo.jpg',
+                width: 36,
+                height: 36,
+                fit: BoxFit.cover,
               ),
             ),
             if (extended) ...[

@@ -79,6 +79,7 @@ flutter:
   - assets/images/Onboarding/supplier/
   - assets/images/Onboarding/manager/
   - assets/images/Onboarding/driver/
+  - assets/images/logo/
   - assets/
 
   # An image asset can refer to one or more resolution-specific "variants", see

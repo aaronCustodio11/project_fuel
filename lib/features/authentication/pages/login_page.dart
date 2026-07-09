@@ -134,17 +134,11 @@ class _LoginScreenPageState extends State<LoginScreenPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.local_gas_station_rounded,
-              size: 48,
-              color: theme.colorScheme.primary,
-            ),
+          Image.asset(
+            'assets/images/logo/logo.jpg',
+            width: 80,
+            height: 80,
+            fit: BoxFit.contain,
           ),
           const SizedBox(height: 24),
           Text('FleetSense', style: theme.textTheme.headlineLarge),
@@ -171,17 +165,11 @@ class _LoginScreenPageState extends State<LoginScreenPage> {
   Widget _buildMobileHeader(ThemeData theme) {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            Icons.local_gas_station_rounded,
-            size: 48,
-            color: theme.colorScheme.primary,
-          ),
+        Image.asset(
+          'assets/images/logo/logo.jpg',
+          width: 80,
+          height: 80,
+          fit: BoxFit.contain,
         ),
 
         const SizedBox(height: 20),

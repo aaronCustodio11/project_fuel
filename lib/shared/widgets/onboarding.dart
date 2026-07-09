@@ -77,6 +77,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Manage your entire fuel supply operation from one central hub. '
           'Track fleets, monitor users, and keep your business running '
           'efficiently.',
+      imagePath: 'assets/images/logo/logo.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.dashboard_outlined,
@@ -148,6 +149,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Oversee fuel station operations with real-time insights and '
           'control. Monitor fuel levels, detect issues, and manage your '
           'station efficiently.',
+      imagePath: 'assets/images/logo/logo.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.dashboard_outlined,
@@ -200,6 +202,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Your all-in-one tool for managing fuel deliveries on the road. '
           'Navigate routes, track deliveries, and keep your truck in top '
           'condition.',
+      imagePath: 'assets/images/logo/logo.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.map_outlined,
