@@ -8,6 +8,10 @@ class TruckModel {
   final int heading;
   final double latitude;
   final double longitude;
+  final double fuelLevel;
+  final int tankCapacity;
+
+  int get litersOnBoard => (fuelLevel * tankCapacity).round();
 
   const TruckModel({
     required this.truckId,
@@ -19,6 +23,8 @@ class TruckModel {
     this.heading = 0,
     this.latitude = 0.0,
     this.longitude = 0.0,
+    this.fuelLevel = 0.0,
+    this.tankCapacity = 0,
   });
 
   factory TruckModel.fromJson(Map<String, dynamic> json) {
@@ -34,6 +40,8 @@ class TruckModel {
       heading: json['heading'] as int? ?? 0,
       latitude: (location['latitude'] as num? ?? 0.0).toDouble(),
       longitude: (location['longitude'] as num? ?? 0.0).toDouble(),
+      fuelLevel: (json['fuelLevel'] as num? ?? 0.0).toDouble(),
+      tankCapacity: json['tankCapacity'] as int? ?? 0,
     );
   }
 }
@@ -54,7 +62,24 @@ class DeliveryModel {
   final String stationName;
   final double stationLat;
   final double stationLng;
+  final String stationType;
   final String sourceStationName;
+  final double sourceStationLat;
+  final double sourceStationLng;
+  final String sourceStationType;
+
+  String get statusLabel {
+    switch (status) {
+      case 'completed':
+        return 'Completed';
+      case 'inProgress':
+        return 'En Route';
+      case 'scheduled':
+        return 'Scheduled';
+      default:
+        return status;
+    }
+  }
 
   const DeliveryModel({
     required this.id,
@@ -71,6 +96,10 @@ class DeliveryModel {
     this.stationName = '',
     this.stationLat = 0.0,
     this.stationLng = 0.0,
+    this.stationType = '',
     this.sourceStationName = '',
+    this.sourceStationLat = 0.0,
+    this.sourceStationLng = 0.0,
+    this.sourceStationType = '',
   });
 }

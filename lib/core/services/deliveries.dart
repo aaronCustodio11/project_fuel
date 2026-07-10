@@ -59,7 +59,11 @@ class DeliveryService {
         stationName: station?['name'] as String? ?? stationId,
         stationLat: (station?['lat'] as num? ?? 0.0).toDouble(),
         stationLng: (station?['lng'] as num? ?? 0.0).toDouble(),
+        stationType: station?['type'] as String? ?? '',
         sourceStationName: sourceStation?['name'] as String? ?? sourceStationId,
+        sourceStationLat: (sourceStation?['lat'] as num? ?? 0.0).toDouble(),
+        sourceStationLng: (sourceStation?['lng'] as num? ?? 0.0).toDouble(),
+        sourceStationType: sourceStation?['type'] as String? ?? '',
       );
     }).toList();
   }

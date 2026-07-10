@@ -24,6 +24,7 @@ lib/
 │   │   ├── deliveries.dart            # DeliveryService (3-way join)
 │   │   ├── json_reader.dart           # Reads mock JSON assets
 │   │   ├── maintenance_service.dart   # Maintenance record queries
+│   │   ├── navigation_simulator.dart  # Reusable ValueNotifier-based truck movement simulation
 │   │   └── osrm_routing.dart          # OSRM API client
 │   └── theme/
 │       └── app_theme.dart             # Light/dark Material 3, ThemeProvider
@@ -36,8 +37,8 @@ lib/
 │   ├── driver/
 │   │   ├── driver_screen.dart         # Shell with bottom nav + IndexedStack
 │   │   ├── pages/
-│   │   │   ├── map_page.dart          # Live map, route, stops tracker
-│   │   │   ├── deliveries_page.dart   # Delivery stats & history
+│   │   │   ├── map_page.dart          # Navigation map, depot + station markers, OSRM routing
+│   │   │   ├── deliveries_page.dart   # Two-phase delivery planning view + selection mode
 │   │   │   └── maintenance_page.dart  # Vehicle maintenance schedule
 │   │   └── widgets/                   # Driver-specific components
 │   ├── manager/
@@ -71,12 +72,12 @@ assets/
 ├── images/
 │   └── Onboarding/                    # 9 intro screenshots (Supplier, Driver, Manager)
 └── mock_data/
-    ├── authentication.json            # 10 users (drivers, managers, suppliers)
-    ├── deliveries.json                # 8 deliveries (truckId + stationId FK)
+    ├── authentication.json            # 12 users (2 suppliers, 4 managers, 6 drivers)
+    ├── deliveries.json                # 14 deliveries (truckId + stationId FK, supports inProgress/completed)
     ├── maintenance.json               # 14 records (assignedToId FK)
-    ├── stations.json                  # 12 stations in Batangas area
+    ├── stations.json                  # 11 stations (2 depots, 9 gas stations)
     ├── theft_alerts.json              # 7 alerts (vehicleId FK)
-    └── vehicles.json                  # 9 trucks (fuelLevel, driverId nullable)
+    └── vehicles.json                  # 9 trucks (fuelLevel, tankCapacity, driverId, dynamic status)
 ```
 
 ---
@@ -117,12 +118,37 @@ All data is read from `assets/mock_data/`:
 
 | File | Contents | Key Relationships |
 |------|----------|-------------------|
-| `authentication.json` | 10 user accounts (2 suppliers, 4 managers, 4 drivers) | Roles: `supplier`, `manager`, `driver` |
-| `vehicles.json` | 9 trucks with `supplierId`, `driverId` (nullable), `fuelLevel`, status | `truckId` ← `deliveries.truckId`, `theft_alerts.vehicleId` |
-| `stations.json` | 12 fuel stations in Batangas area with `supplierId`, capacity, stock | `stationId` ← `deliveries.stationId` |
-| `deliveries.json` | 8 deliveries with `truckId`, `stationId`, product, quantity | FK: `truckId` → `vehicles.truckId`, `stationId` → `stations.stationId` |
+| `authentication.json` | 12 user accounts (2 suppliers, 4 managers, 6 drivers) | Roles: `supplier`, `manager`, `driver` |
+| `vehicles.json` | 9 trucks with `supplierId`, `driverId`, `fuelLevel`, `tankCapacity`, status | `truckId` ← `deliveries.truckId`, `theft_alerts.vehicleId` |
+| `stations.json` | 11 stations in Batangas area, types: `depot`, `gasStation` | `stationId` ← `deliveries.stationId`, `stationType` differentiates depot vs gas station |
+| `deliveries.json` | 14 deliveries with `truckId`, `stationId`, `sourceStation`, product, quantity, status (`scheduled`/`inProgress`/`completed`) | FK: `truckId` → `vehicles.truckId`, `stationId`/`sourceStation` → `stations.stationId` |
 | `maintenance.json` | 14 service records with `vehicleId`, `assignedToId` (driver/manager) | FK: `assignedToId` → `authentication.id` |
 | `theft_alerts.json` | 7 theft alerts with `vehicleId`, Batangas-area coordinates | FK: `vehicleId` → `vehicles.truckId` |
+
+### Data Model
+
+**Two location types:**
+- **Depots** (`type: "depot"`) — Company-owned fuel storage hubs. Trucks start here after loading fuel. Supply origin for all deliveries. Two depots: FleetSense Depot Batangas City (supplier 9) and FleetSense Depot Lipa (supplier 10).
+- **Gas Stations** (`type: "gasStation"`) — Customer delivery endpoints. Trucks deliver fuel here.
+
+**Supply chain flow:**
+```
+   Supplier → Depot → Truck starts at depot → Gas Station delivery
+```
+
+**Delivery relationships:**
+Each delivery has a `sourceStation` (the depot the truck loads from) and a `stationId` (the destination gas station). The `StationType` (depot/gasStation) is resolved at load time via `DeliveryService.getAllDeliveries()` by joining `deliveries.json` with `stations.json`. Both models carry `stationType`/`sourceStationType` for UI differentiation.
+
+**New drivers added:**
+| User | Name | Truck | Depot | Status |
+|------|------|-------|-------|--------|
+| 11 | Ricardo Santos | TRK-007 | FleetSense Depot Lipa | En Route |
+| 12 | Pedro Gonzales | TRK-008 | FleetSense Depot Batangas | Idle |
+
+**Truck status & live simulation:**
+Truck status is driven by both static JSON data and runtime state. Trucks with `"En Route"` in `vehicles.json` map to `TruckStatus.moving` in the supplier fleet dashboard. On the driver's deliveries page, the truck status shows `"En Route"` when either an active navigation route is running or the static JSON status is `"En Route"`, and `"Idle"` otherwise.
+
+On the supplier fleet tracking page, en-route trucks are animated via `NavigationSimulator` — they move along OSRM routes from their current position through their in-progress and scheduled delivery stops. Simulators update positions every 2 seconds and trigger arrival notifications at each stop.
 
 No backend or real database is required.
 
@@ -142,17 +168,26 @@ On first login, each role sees a role-specific introduction overlay with feature
 
 ### Driver
 
-The driver shell uses a **bottom tab bar** with four tabs, preserving page state via `IndexedStack`.
+The driver shell uses a **bottom tab bar** with four tabs, preserving page state via `IndexedStack`. Routes are coordinated between the Deliveries and Map pages via shared `Set<String>` delivery IDs in the parent `DriverScreen`.
 
-**Map** — the primary driving interface. Renders an interactive `flutter_map` with:
-- Driver's current position marker.
-- Nearest-neighbor-ordered delivery stop markers with numbered badges.
-- OSRM route polyline between stops.
-- Auto-simulation: animates the driver marker along the route, marking stops as completed when within 50m.
-- Collapsible stop tracker panel and a bottom navigation info card (instruction, distance, ETA).
-- Completion notifications with animated banners.
+**Deliveries** — two-phase interface for planning and starting delivery routes with per-truck status tracking.
 
-**Deliveries** — summary of all assigned deliveries. Shows four KPI cards (Total, Completed, En Route, Pending), truck info (volume, speed, status), and a scrollable history list with status chips.
+*View mode* — Shows four KPI cards (Total, Completed, En Route, Pending), truck info (speed, dynamic status), and a scrollable delivery history list (product name only, quantity hidden). Each tile shows a station-type-aware icon (depot icon for depots, gas pump icon for gas stations) and a status chip. Tapping a tile opens a detail bottom sheet with full info (source, type, dates, notes). A "Start Delivery" button in the bottom bar enters selection mode.
+
+*Selection mode* — Checkboxes appear on each non-completed tile. The header changes to "Select destinations". The bottom bar shows Cancel, selected count, and a "Start Navigation" button. Tapping "Start Navigation" shows a non-dismissable loading dialog ("Calculating most efficient route...") before switching to the map.
+
+*Route active state* — When a route is active (navigation in progress on the map), a banner appears at the top of the delivery list showing "Route active — N destinations" with a "View on Map" button. The bottom bar shows a navigation button instead of "Start Delivery".
+
+**Map** — navigation interface with live position simulation via `NavigationSimulator`. Renders an interactive `flutter_map` with:
+- Driver's current position marker (set from the truck's `currentLocation` in `vehicles.json`, updated in real-time by the simulator).
+- Source depot markers (blue warehouse icon) showing fuel origin points for deliveries.
+- Destination markers (orange gas pump icon) showing delivery stops.
+- OSRM route polyline between waypoints.
+- Navigation info card (distance, ETA, next stop) with an "End Navigation" button.
+- On stop arrival, a notification banner shows "Arrived at [station]".
+- When navigation ends (all stops complete or user taps "End Navigation"), the parent screen clears the active route, restoring the deliveries page to view mode via `onNavigationEnd` callback.
+- A `ValueNotifier<NavigationState>` drives live driver position, completed stops, remaining distance, and ETA.
+- Only selected deliveries' markers appear during navigation; all driver deliveries show by default.
 
 **Vehicle Maintenance** — full request lifecycle from the driver's perspective. Shows the assigned truck info, pending requests (with edit button), scheduled & in-progress items (with priority indicators), rejected requests (with reason and resubmit button), and completed service history (with dates and costs). A "Request" button opens a dialog to submit a new request (type, description, priority, preferred date). Pending requests can be edited in-place; rejected requests can be resubmitted after addressing the rejection reason.
 
@@ -176,8 +211,9 @@ The supplier shell uses a **sidebar** with five pages, preserving page state via
 - Recent alerts list (with "View All" navigation).
 - Maintenance overview (scheduled/in progress/overdue/completed counts).
 
-**Fleet Tracking** — live fleet monitoring with:
-- Interactive map showing user location, color-coded truck markers (Moving/Idle/Maintenance/Off Duty), and station markers.
+**Fleet Tracking** — live fleet monitoring with automatic position simulation for en-route trucks:
+- Interactive map showing user location, color-coded truck markers (Moving/Idle/Maintenance/Off Duty), station markers, and context-aware side panel.
+- En-route trucks (`TruckStatus.moving`) are automatically animated via `NavigationSimulator` — each moves along its OSRM route through in-progress and scheduled delivery stops, updating markers every 2 seconds.
 - Five KPI cards (Total, Moving, Idle, Maintenance, Off Duty).
 - Context-aware side panel: truck list by default, detail panel on marker tap, delivery tracker panel when tracking a truck with live OSRM route.
 - "Add Location" dialog (map pin + type/name/address fields).

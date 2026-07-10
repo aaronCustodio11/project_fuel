@@ -4,13 +4,14 @@
     "plateNumber": "ABC 1234",
     "driverId": 1,
     "supplierId": 9,
-    "fuelLevel": 0.72,
+    "fuelLevel": 0.85,
+    "tankCapacity": 12000,
     "status": "En Route",
-    "speedKph": 48,
-    "heading": 105,
+    "speedKph": 42,
+    "heading": 180,
     "currentLocation": {
-      "latitude": 13.7685,
-      "longitude": 121.0662
+      "latitude": 13.763,
+      "longitude": 121.052
     },
     "deliveries": []
   },
@@ -20,12 +21,13 @@
     "driverId": 2,
     "supplierId": 9,
     "fuelLevel": 0.34,
-    "status": "Delivering",
+    "tankCapacity": 12000,
+    "status": "Idle",
     "speedKph": 0,
     "heading": 0,
     "currentLocation": {
-      "latitude": 13.7549,
-      "longitude": 121.0608
+      "latitude": 13.758,
+      "longitude": 121.058
     },
     "deliveries": []
   },
@@ -35,12 +37,13 @@
     "driverId": 5,
     "supplierId": 10,
     "fuelLevel": 0.88,
+    "tankCapacity": 12000,
     "status": "En Route",
-    "speedKph": 55,
-    "heading": 275,
+    "speedKph": 38,
+    "heading": 315,
     "currentLocation": {
-      "latitude": 13.8021,
-      "longitude": 121.0875
+      "latitude": 13.966,
+      "longitude": 121.143
     },
     "deliveries": []
   },
@@ -49,12 +52,14 @@
     "plateNumber": "JKL 3456",
     "driverId": 6,
     "supplierId": 10,
-    "status": "Completed",
+    "fuelLevel": 0.0,
+    "tankCapacity": 12000,
+    "status": "Idle",
     "speedKph": 0,
     "heading": 0,
     "currentLocation": {
-      "latitude": 13.7910,
-      "longitude": 121.0712
+      "latitude": 13.941,
+      "longitude": 121.162
     },
     "deliveries": []
   },
@@ -64,6 +69,7 @@
     "driverId": null,
     "supplierId": 9,
     "fuelLevel": 0.60,
+    "tankCapacity": 12000,
     "status": "Idle",
     "speedKph": 0,
     "heading": 0,
@@ -78,6 +84,8 @@
     "plateNumber": "PQR 1234",
     "driverId": null,
     "supplierId": 9,
+    "fuelLevel": 0.0,
+    "tankCapacity": 12000,
     "status": "Maintenance",
     "speedKph": 0,
     "heading": 0,
@@ -90,30 +98,32 @@
   {
     "truckId": "TRK-007",
     "plateNumber": "STU 5678",
-    "driverId": null,
+    "driverId": 11,
     "supplierId": 10,
     "fuelLevel": 0.45,
+    "tankCapacity": 12000,
     "status": "En Route",
-    "speedKph": 42,
-    "heading": 180,
+    "speedKph": 35,
+    "heading": 270,
     "currentLocation": {
-      "latitude": 13.8000,
-      "longitude": 121.0800
+      "latitude": 13.941,
+      "longitude": 121.100
     },
     "deliveries": []
   },
   {
     "truckId": "TRK-008",
     "plateNumber": "VWX 9012",
-    "driverId": null,
+    "driverId": 12,
     "supplierId": 10,
     "fuelLevel": 0.80,
+    "tankCapacity": 12000,
     "status": "Idle",
     "speedKph": 0,
     "heading": 0,
     "currentLocation": {
-      "latitude": 13.7750,
-      "longitude": 121.0550
+      "latitude": 13.758,
+      "longitude": 121.058
     },
     "deliveries": []
   },
@@ -122,6 +132,8 @@
     "plateNumber": "YZA 3456",
     "driverId": null,
     "supplierId": 10,
+    "fuelLevel": 0.0,
+    "tankCapacity": 12000,
     "status": "Maintenance",
     "speedKph": 0,
     "heading": 0,

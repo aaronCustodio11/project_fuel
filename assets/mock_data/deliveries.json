@@ -2,11 +2,11 @@
   {
     "id": "DEL-001",
     "truckId": "TRK-001",
-    "stationId": "STN-005",
+    "stationId": "STN-006",
     "product": "Diesel",
     "quantity": 4000,
     "unit": "liters",
-    "status": "scheduled",
+    "status": "inProgress",
     "scheduledDate": "2026-07-06T08:00:00.000",
     "completedDate": null,
     "sourceStation": "STN-001",
@@ -22,7 +22,7 @@
     "status": "scheduled",
     "scheduledDate": "2026-07-06T09:00:00.000",
     "completedDate": null,
-    "sourceStation": "STN-003",
+    "sourceStation": "STN-001",
     "notes": ""
   },
   {
@@ -32,10 +32,10 @@
     "product": "Diesel",
     "quantity": 3500,
     "unit": "liters",
-    "status": "inProgress",
+    "status": "scheduled",
     "scheduledDate": "2026-07-05T10:00:00.000",
     "completedDate": null,
-    "sourceStation": "STN-005",
+    "sourceStation": "STN-001",
     "notes": ""
   },
   {
@@ -48,21 +48,8 @@
     "status": "completed",
     "scheduledDate": "2026-07-04T07:00:00.000",
     "completedDate": "2026-07-04T11:30:00.000",
-    "sourceStation": "STN-005",
+    "sourceStation": "STN-009",
     "notes": "Delivered ahead of schedule"
-  },
-  {
-    "id": "DEL-005",
-    "truckId": "TRK-001",
-    "stationId": "STN-009",
-    "product": "Kerosene",
-    "quantity": 2000,
-    "unit": "liters",
-    "status": "scheduled",
-    "scheduledDate": "2026-07-07T06:00:00.000",
-    "completedDate": null,
-    "sourceStation": "STN-001",
-    "notes": ""
   },
   {
     "id": "DEL-006",
@@ -71,10 +58,10 @@
     "product": "Diesel",
     "quantity": 3000,
     "unit": "liters",
-    "status": "scheduled",
+    "status": "inProgress",
     "scheduledDate": "2026-07-08T08:00:00.000",
     "completedDate": null,
-    "sourceStation": "STN-003",
+    "sourceStation": "STN-009",
     "notes": ""
   },
   {
@@ -87,7 +74,7 @@
     "status": "completed",
     "scheduledDate": "2026-07-03T09:00:00.000",
     "completedDate": "2026-07-03T13:15:00.000",
-    "sourceStation": "STN-005",
+    "sourceStation": "STN-001",
     "notes": ""
   },
   {
@@ -101,6 +88,97 @@
     "scheduledDate": "2026-07-05T11:00:00.000",
     "completedDate": null,
     "sourceStation": "STN-009",
+    "notes": ""
+  },
+  {
+    "id": "DEL-009",
+    "truckId": "TRK-007",
+    "stationId": "STN-010",
+    "product": "Unleaded Gasoline",
+    "quantity": 2000,
+    "unit": "liters",
+    "status": "scheduled",
+    "scheduledDate": "2026-07-06T09:00:00.000",
+    "completedDate": null,
+    "sourceStation": "STN-009",
+    "notes": ""
+  },
+  {
+    "id": "DEL-010",
+    "truckId": "TRK-007",
+    "stationId": "STN-011",
+    "product": "Premium Gasoline",
+    "quantity": 1500,
+    "unit": "liters",
+    "status": "scheduled",
+    "scheduledDate": "2026-07-06T10:30:00.000",
+    "completedDate": null,
+    "sourceStation": "STN-009",
+    "notes": ""
+  },
+  {
+    "id": "DEL-011",
+    "truckId": "TRK-008",
+    "stationId": "STN-006",
+    "product": "Diesel",
+    "quantity": 3000,
+    "unit": "liters",
+    "status": "scheduled",
+    "scheduledDate": "2026-07-07T07:00:00.000",
+    "completedDate": null,
+    "sourceStation": "STN-001",
+    "notes": ""
+  },
+  {
+    "id": "DEL-012",
+    "truckId": "TRK-001",
+    "stationId": "STN-007",
+    "product": "Unleaded Gasoline",
+    "quantity": 2500,
+    "unit": "liters",
+    "status": "completed",
+    "scheduledDate": "2026-07-04T07:00:00.000",
+    "completedDate": "2026-07-04T09:45:00.000",
+    "sourceStation": "STN-001",
+    "notes": ""
+  },
+  {
+    "id": "DEL-013",
+    "truckId": "TRK-003",
+    "stationId": "STN-011",
+    "product": "Diesel",
+    "quantity": 2000,
+    "unit": "liters",
+    "status": "completed",
+    "scheduledDate": "2026-07-05T08:00:00.000",
+    "completedDate": "2026-07-05T11:20:00.000",
+    "sourceStation": "STN-003",
+    "notes": ""
+  },
+  {
+    "id": "DEL-014",
+    "truckId": "TRK-007",
+    "stationId": "STN-006",
+    "product": "Diesel",
+    "quantity": 2200,
+    "unit": "liters",
+    "status": "completed",
+    "scheduledDate": "2026-07-04T10:00:00.000",
+    "completedDate": "2026-07-04T13:30:00.000",
+    "sourceStation": "STN-009",
+    "notes": ""
+  },
+  {
+    "id": "DEL-015",
+    "truckId": "TRK-008",
+    "stationId": "STN-010",
+    "product": "Unleaded Gasoline",
+    "quantity": 1800,
+    "unit": "liters",
+    "status": "completed",
+    "scheduledDate": "2026-07-03T14:00:00.000",
+    "completedDate": "2026-07-03T16:50:00.000",
+    "sourceStation": "STN-001",
     "notes": ""
   }
 ]

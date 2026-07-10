@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -7,11 +6,15 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/deliveries.dart';
+import 'package:project_fuel/core/services/navigation_simulator.dart';
 import 'package:project_fuel/core/services/osrm_routing.dart';
 import 'package:project_fuel/shared/widgets/role_badge.dart';
 
 class DriverMapPage extends StatefulWidget {
-  const DriverMapPage({super.key});
+  final Set<String> initialSelectedDeliveryIds;
+  final VoidCallback? onNavigationEnd;
+
+  const DriverMapPage({super.key, this.initialSelectedDeliveryIds = const {}, this.onNavigationEnd});
 
   @override
   State<DriverMapPage> createState() => _DriverMapPageState();
@@ -26,27 +29,40 @@ class _DriverMapPageState extends State<DriverMapPage> {
   bool _isLoading = true;
   String _userName = 'Driver';
   LatLng? _driverPosition;
-  List<_DeliveryStop> _deliveryStops = [];
+  TruckModel? _truck;
+  List<DeliveryModel> _driverDeliveries = [];
   List<LatLng>? _routePoints;
-  _NavigationInfo? _navigationInfo;
-
-  bool _stopsExpanded = true;
-  int _routeProgress = 0;
-  Set<int> _completedStops = {};
-  Timer? _simulationTimer;
+  Set<String> _selectedDeliveryIds = {};
+  bool _isNavigating = false;
+  NavigationSimulator? _simulator;
   String? _notificationMessage;
-
+  Set<int> _completedStops = {};
+  double _remainingKm = 0;
+  int _etaMinutes = 0;
   bool _followDriver = true;
 
   @override
   void initState() {
     super.initState();
+    _selectedDeliveryIds = widget.initialSelectedDeliveryIds;
     _initAsync();
   }
 
   @override
+  void didUpdateWidget(DriverMapPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialSelectedDeliveryIds != oldWidget.initialSelectedDeliveryIds &&
+        widget.initialSelectedDeliveryIds.isNotEmpty) {
+      _selectedDeliveryIds = widget.initialSelectedDeliveryIds;
+      if (!_isLoading) {
+        _startNavigation();
+      }
+    }
+  }
+
+  @override
   void dispose() {
-    _simulationTimer?.cancel();
+    _simulator?.dispose();
     _mapController.dispose();
     super.dispose();
   }
@@ -82,204 +98,138 @@ class _DriverMapPageState extends State<DriverMapPage> {
     if (user != null) {
       _userName = user.fullName.isEmpty ? 'Driver' : user.fullName;
 
-      if (user.latitude != null && user.longitude != null) {
+      _truck = await _deliveryService.getTruckForDriver(user.userId);
+      if (_truck != null && (_truck!.latitude != 0 || _truck!.longitude != 0)) {
+        _driverPosition = LatLng(_truck!.latitude, _truck!.longitude);
+      } else if (user.latitude != null && user.longitude != null) {
         _driverPosition = LatLng(user.latitude!, user.longitude!);
       }
 
-      final deliveries = await _deliveryService.getDeliveriesForDriver(user.userId);
+      _driverDeliveries = await _deliveryService.getDeliveriesForDriver(user.userId);
 
-      if (deliveries.isNotEmpty) {
-        final rawStops = deliveries
-            .where((d) => d.stationLat != 0 || d.stationLng != 0)
-            .map((d) => LatLng(d.stationLat, d.stationLng))
-            .toList();
-
-        final orderedPositions = _orderByNearestNeighbor(
-          _driverPosition ?? rawStops.first,
-          rawStops,
-        );
-
-        final nameMap = <LatLng, String>{};
-        for (final d in deliveries) {
-          nameMap[LatLng(d.stationLat, d.stationLng)] = d.stationName;
-        }
-
-        _deliveryStops = orderedPositions
-            .asMap()
-            .entries
-            .map((e) => _DeliveryStop(
-                  position: e.value,
-                  name: nameMap[e.value] ?? 'Stop ${e.key + 1}',
-                  stopNumber: e.key + 1,
-                  totalStops: orderedPositions.length,
-                ))
-            .toList();
+      if (_selectedDeliveryIds.isNotEmpty) {
+        _startNavigation();
       }
-    }
-
-    if (_driverPosition != null && _deliveryStops.isNotEmpty) {
-      final waypoints = [
-        _driverPosition!,
-        ..._deliveryStops.map((s) => s.position),
-      ];
-      await _fetchRoute(waypoints);
     }
 
     if (!mounted) return;
 
-    if (_driverPosition != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _mapController.move(_driverPosition!, 14.0);
-        _mapController.rotate(0.0);
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _mapController.move(_driverPosition ?? const LatLng(13.76, 121.06), 14.0);
+      _mapController.rotate(0.0);
+    });
 
     setState(() => _isLoading = false);
   }
 
-  Future<void> _fetchRoute(List<LatLng> waypoints) async {
+  void _startNavigation() async {
+    if (_selectedDeliveryIds.isEmpty || _driverPosition == null) return;
+
+    final selected = _driverDeliveries
+        .where((d) => _selectedDeliveryIds.contains(d.id))
+        .toList();
+    if (selected.isEmpty) return;
+
+    final sources = <LatLng>[];
+    final seenSources = <String>{};
+    final destinations = <LatLng>[];
+    final stops = <NavigationStop>[];
+
+    for (final d in selected) {
+      if ((d.sourceStationLat != 0 || d.sourceStationLng != 0) &&
+          d.sourceStationId.isNotEmpty) {
+        final key = '${d.sourceStationLat},${d.sourceStationLng}';
+        if (!seenSources.contains(key)) {
+          seenSources.add(key);
+          sources.add(LatLng(d.sourceStationLat, d.sourceStationLng));
+        }
+      }
+      if (d.stationLat != 0 || d.stationLng != 0) {
+        destinations.add(LatLng(d.stationLat, d.stationLng));
+        stops.add(NavigationStop(
+          id: d.id,
+          name: d.stationName,
+          position: LatLng(d.stationLat, d.stationLng),
+        ));
+      }
+    }
+
+    final sourcesFiltered = sources.where((s) {
+      final dist = _calculateDistanceKm(_driverPosition!, s);
+      return dist > 0.1;
+    }).toList();
+
+    final orderedSources = sourcesFiltered.length < 2
+        ? sourcesFiltered
+        : _orderByNearestNeighbor(_driverPosition!, sourcesFiltered);
+    final orderedDests = destinations.length < 2
+        ? destinations
+        : _orderByNearestNeighbor(
+            orderedSources.isNotEmpty ? orderedSources.last : _driverPosition!,
+            destinations,
+          );
+
+    final waypoints = [
+      _driverPosition!,
+      ...orderedSources,
+      ...orderedDests,
+    ];
+
+    setState(() => _isNavigating = true);
+
     final result = await _routingService.getRoute(waypoints: waypoints);
 
-    if (!mounted) return;
+    if (!mounted || result == null) return;
 
-    if (result != null) {
-      final distanceKm = _calculateRouteDistance(result.polyline);
-      final etaMinutes = (distanceKm / 45 * 60).round().clamp(3, 90);
-      final firstStop = _deliveryStops.isNotEmpty ? _deliveryStops.first : null;
+    setState(() => _routePoints = result.polyline);
 
-      setState(() {
-        _routePoints = result.polyline;
-        _navigationInfo = _NavigationInfo(
-          instruction: distanceKm < 0.3
-              ? 'Arrive at ${firstStop?.name ?? "destination"}'
-              : 'Next: ${firstStop?.name ?? "destination"}',
-          distanceKm: distanceKm,
-          etaMinutes: etaMinutes,
-          stopLabel: firstStop != null
-              ? 'Stop ${firstStop.stopNumber} of ${firstStop.totalStops}'
-              : null,
-        );
-      });
-
-      _startSimulation();
-    } else {
-      double totalKm = 0;
-      for (var i = 0; i < waypoints.length - 1; i++) {
-        totalKm += _calculateDistanceKm(waypoints[i], waypoints[i + 1]);
-      }
-      final etaMinutes = (totalKm / 45 * 60).round().clamp(3, 90);
-      final firstStop = _deliveryStops.isNotEmpty ? _deliveryStops.first : null;
-
-      if (mounted) {
-        setState(() {
-          _routePoints = null;
-          _navigationInfo = _NavigationInfo(
-            instruction: 'Next: ${firstStop?.name ?? "destination"}',
-            distanceKm: totalKm,
-            etaMinutes: etaMinutes,
-            stopLabel: firstStop != null
-                ? 'Stop ${firstStop.stopNumber} of ${firstStop.totalStops}'
-                : null,
-          );
-        });
-      }
-    }
-  }
-
-  void _startSimulation() {
-    if (_routePoints == null || _routePoints!.length < 2) return;
-
-    _routeProgress = 0;
-    _completedStops = {};
-    _followDriver = true;
-
-    const tickMs = 800;
-    _simulationTimer = Timer.periodic(const Duration(milliseconds: tickMs), (_) {
-      if (!mounted) {
-        _simulationTimer?.cancel();
-        return;
-      }
-      _advanceSimulation();
-    });
-  }
-
-  void _advanceSimulation() {
-    if (_routePoints == null || _routeProgress >= _routePoints!.length - 1) {
-      _simulationTimer?.cancel();
-      return;
-    }
-
-    _routeProgress++;
-    _driverPosition = _routePoints![_routeProgress];
-
-    for (var i = 0; i < _deliveryStops.length; i++) {
-      final dist = _calculateDistanceKm(
-          _driverPosition!, _deliveryStops[i].position);
-      if (dist < 0.05 && !_completedStops.contains(i)) {
-        _completedStops = {..._completedStops, i};
-        _showStopNotification(_deliveryStops[i]);
-      }
-    }
-
-    final remaining = _routePoints!.sublist(_routeProgress);
-    final remainingKm = _calculateRouteDistance(remaining);
-    final etaMinutes = (remainingKm / 45 * 60).round().clamp(1, 90);
-
-    final nextIdx = _deliveryStops.indexWhere(
-      (s) => !_completedStops.contains(_deliveryStops.indexOf(s)),
-    );
-    final nextStop = nextIdx != -1 ? _deliveryStops[nextIdx] : null;
-
-    _navigationInfo = _NavigationInfo(
-      instruction: nextStop != null
-          ? 'Next: ${nextStop.name}'
-          : 'All stops completed',
-      distanceKm: remainingKm,
-      etaMinutes: etaMinutes,
-      stopLabel: nextStop != null
-          ? 'Stop ${nextStop.stopNumber} of ${nextStop.totalStops}'
-          : null,
+    _simulator = NavigationSimulator(
+      route: result.polyline,
+      stops: stops,
+      speedKph: 45,
+      tickMs: 1000,
     );
 
-    if (_followDriver && _driverPosition != null) {
-      _mapController.move(_driverPosition!, _mapController.camera.zoom);
-    }
-
-    if (remainingKm < 0.05 && nextStop == null) {
-      _simulationTimer?.cancel();
-      _showArrivedNotification();
-    }
-
-    setState(() {});
+    _simulator!.state.addListener(_onSimulatorTick);
+    _simulator!.start();
   }
 
-  void _showStopNotification(_DeliveryStop stop) {
-    _notificationMessage = 'Arrived at ${stop.name}';
-    Future.delayed(const Duration(seconds: 3), () {
-      if (!mounted) return;
-      setState(() {
-        if (_notificationMessage == 'Arrived at ${stop.name}') {
-          _notificationMessage = null;
-        }
-      });
-    });
-  }
+  void _onSimulatorTick() {
+    if (!mounted || _simulator == null) return;
+    final s = _simulator!.state.value;
 
-  void _showArrivedNotification() {
-    _notificationMessage = 'All deliveries completed';
-    Future.delayed(const Duration(seconds: 4), () {
-      if (!mounted) return;
-      setState(() => _notificationMessage = null);
-    });
-  }
+    setState(() {
+      _driverPosition = s.currentPosition;
+      _completedStops = s.completedStopIndices;
+      _remainingKm = s.remainingDistanceKm;
+      _etaMinutes = s.etaMinutes;
+      _notificationMessage = s.notification;
 
-  void _onMapEvent(MapEvent event) {
-    if (event is MapEventMoveEnd || event is MapEventFlingAnimationEnd) {
       if (_followDriver) {
-        setState(() => _followDriver = false);
+        _mapController.move(s.currentPosition, _mapController.camera.zoom);
       }
-    }
+
+      if (s.isComplete) {
+        _simulator!.dispose();
+        _simulator = null;
+      }
+    });
+  }
+
+  void _endNavigation() {
+    _simulator?.dispose();
+    _simulator = null;
+    setState(() {
+      _isNavigating = false;
+      _routePoints = null;
+      _selectedDeliveryIds = {};
+      _completedStops = {};
+      _notificationMessage = null;
+      _remainingKm = 0;
+      _etaMinutes = 0;
+    });
+    widget.onNavigationEnd?.call();
   }
 
   void _centerOnDriver() {
@@ -288,12 +238,12 @@ class _DriverMapPageState extends State<DriverMapPage> {
     setState(() => _followDriver = true);
   }
 
-  double _calculateRouteDistance(List<LatLng> route) {
-    double total = 0;
-    for (var i = 0; i < route.length - 1; i++) {
-      total += _calculateDistanceKm(route[i], route[i + 1]);
+  void _onMapEvent(MapEvent event) {
+    if (event is MapEventMoveEnd || event is MapEventFlingAnimationEnd) {
+      if (_followDriver) {
+        setState(() => _followDriver = false);
+      }
     }
-    return total;
   }
 
   double _calculateDistanceKm(LatLng a, LatLng b) {
@@ -316,7 +266,12 @@ class _DriverMapPageState extends State<DriverMapPage> {
 
     if (_isLoading) {
       return Scaffold(
-        body: Center(child: LoadingAnimationWidget.staggeredDotsWave(color: theme.colorScheme.primary, size: 50)),
+        body: Center(
+          child: LoadingAnimationWidget.staggeredDotsWave(
+            color: theme.colorScheme.primary,
+            size: 50,
+          ),
+        ),
       );
     }
 
@@ -337,19 +292,48 @@ class _DriverMapPageState extends State<DriverMapPage> {
       );
     }
 
-    for (final stop in _deliveryStops) {
-      markers.add(
-        Marker(
-          point: stop.position,
-          width: 46,
-          height: 46,
-          child: RoleBadge(
-            role: 'station',
-            size: 46,
-            tooltip: '${stop.stopNumber}. ${stop.name}',
+    final deliveries = _isNavigating && _selectedDeliveryIds.isNotEmpty
+        ? _driverDeliveries.where((d) => _selectedDeliveryIds.contains(d.id)).toList()
+        : _driverDeliveries;
+
+    final seenSources = <String>{};
+    for (final d in deliveries) {
+      if ((d.sourceStationLat != 0 || d.sourceStationLng != 0) &&
+          d.sourceStationId.isNotEmpty) {
+        final key = '${d.sourceStationLat},${d.sourceStationLng}';
+        if (!seenSources.contains(key)) {
+          seenSources.add(key);
+          markers.add(
+            Marker(
+              point: LatLng(d.sourceStationLat, d.sourceStationLng),
+              width: 46,
+              height: 46,
+              child: RoleBadge(
+                size: 46,
+                color: const Color(0xFF1565C0),
+                icon: Icons.warehouse_rounded,
+                tooltip: d.sourceStationName,
+              ),
+            ),
+          );
+        }
+      }
+
+      if (d.stationLat != 0 || d.stationLng != 0) {
+        markers.add(
+          Marker(
+            point: LatLng(d.stationLat, d.stationLng),
+            width: 46,
+            height: 46,
+            child: RoleBadge(
+              size: 46,
+              color: Colors.orangeAccent,
+              icon: Icons.local_gas_station_rounded,
+              tooltip: d.stationName,
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
 
     final tileUrl = theme.brightness == Brightness.dark
@@ -359,25 +343,35 @@ class _DriverMapPageState extends State<DriverMapPage> {
     final polylines = <Polyline>[];
 
     if (_routePoints != null && _routePoints!.isNotEmpty) {
-      polylines.add(
-        Polyline(
-          points: _routePoints!,
-          color: theme.colorScheme.outline.withValues(alpha: 0.3),
-          strokeWidth: 4,
-        ),
-      );
-    }
-
-    if (_routePoints != null && _routeProgress < _routePoints!.length) {
-      polylines.add(
-        Polyline(
-          points: _routePoints!.sublist(_routeProgress > 0 ? _routeProgress - 1 : 0),
-          color: theme.colorScheme.secondary,
-          strokeWidth: 5,
-          borderColor: Colors.white,
-          borderStrokeWidth: 2,
-        ),
-      );
+      final traveled = _simulator != null ? _simulator!.state.value.routeIndex : 0;
+      if (traveled > 0 && traveled < _routePoints!.length) {
+        polylines.add(
+          Polyline(
+            points: _routePoints!.sublist(0, traveled),
+            color: theme.colorScheme.outline.withValues(alpha: 0.3),
+            strokeWidth: 4,
+          ),
+        );
+        polylines.add(
+          Polyline(
+            points: _routePoints!.sublist(traveled),
+            color: theme.colorScheme.secondary,
+            strokeWidth: 5,
+            borderColor: Colors.white,
+            borderStrokeWidth: 2,
+          ),
+        );
+      } else {
+        polylines.add(
+          Polyline(
+            points: _routePoints!,
+            color: theme.colorScheme.secondary,
+            strokeWidth: 5,
+            borderColor: Colors.white,
+            borderStrokeWidth: 2,
+          ),
+        );
+      }
     }
 
     return Scaffold(
@@ -388,7 +382,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
             options: MapOptions(
               initialCenter:
                   _driverPosition ?? const LatLng(13.76, 121.06),
-              initialZoom: 16,
+              initialZoom: 14,
               interactionOptions: const InteractionOptions(
                 flags: InteractiveFlag.all,
               ),
@@ -404,21 +398,31 @@ class _DriverMapPageState extends State<DriverMapPage> {
             ],
           ),
           Positioned(
-            top: 16,
-            left: 16,
-            right: 16,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_notificationMessage != null) ...[
-                  _buildNotification(theme),
-                  const SizedBox(height: 8),
-                ],
-                _buildStopsTracker(theme),
-              ],
+            bottom: 8,
+            right: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '© OpenStreetMap contributors',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
             ),
           ),
-          if (_navigationInfo != null)
+          if (_notificationMessage != null)
+            Positioned(
+              top: 16,
+              left: 16,
+              right: 16,
+              child: _buildNotification(theme),
+            ),
+          if (_isNavigating)
             Positioned(
               left: 16,
               right: 16,
@@ -427,7 +431,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
             ),
           Positioned(
             right: 16,
-            bottom: 120,
+            bottom: _isNavigating ? 120 : 24,
             child: _buildMapControls(theme),
           ),
         ],
@@ -435,31 +439,8 @@ class _DriverMapPageState extends State<DriverMapPage> {
     );
   }
 
-  Widget _buildMapControls(ThemeData theme) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FloatingActionButton.small(
-          heroTag: 'locate',
-          onPressed: _centerOnDriver,
-          backgroundColor: _followDriver
-              ? theme.colorScheme.primary
-              : theme.colorScheme.surface,
-          tooltip: 'Center on driver',
-          child: Icon(
-            Icons.my_location_rounded,
-            color: _followDriver
-                ? theme.colorScheme.onPrimary
-                : theme.colorScheme.primary,
-          ),
-        ),
-
-      ],
-    );
-  }
-
   Widget _buildNotification(ThemeData theme) {
-    final isFinal = _notificationMessage == 'All deliveries completed';
+    final isFinal = _notificationMessage == 'All stops completed';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -501,149 +482,55 @@ class _DriverMapPageState extends State<DriverMapPage> {
     );
   }
 
-  Widget _buildStopsTracker(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(alpha: 0.97),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+  Widget _buildMapControls(ThemeData theme) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FloatingActionButton.small(
+          heroTag: 'locate',
+          onPressed: _centerOnDriver,
+          backgroundColor: _followDriver
+              ? theme.colorScheme.primary
+              : theme.colorScheme.surface,
+          tooltip: 'Center on driver',
+          child: Icon(
+            Icons.my_location_rounded,
+            color: _followDriver
+                ? theme.colorScheme.onPrimary
+                : theme.colorScheme.primary,
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          InkWell(
-            onTap: () => setState(() => _stopsExpanded = !_stopsExpanded),
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.all(2),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.local_gas_station_rounded,
-                    size: 18,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Delivery Stops',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (_completedStops.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: Text(
-                        '${_completedStops.length}/${_deliveryStops.length}',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  AnimatedRotation(
-                    turns: _stopsExpanded ? 0.0 : 0.5,
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      Icons.expand_less,
-                      size: 20,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-            child: _stopsExpanded
-                ? Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: _deliveryStops
-                          .map((stop) => _buildStopRow(theme, stop))
-                          .toList(),
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStopRow(ThemeData theme, _DeliveryStop stop) {
-    final stopIdx = _deliveryStops.indexOf(stop);
-    final isCompleted = _completedStops.contains(stopIdx);
-    final nextIdx = _deliveryStops.indexWhere(
-      (s) => !_completedStops.contains(_deliveryStops.indexOf(s)),
-    );
-    final isCurrent = nextIdx == stopIdx;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: isCompleted
-                  ? theme.colorScheme.primaryContainer
-                  : isCurrent
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.surfaceContainerHighest,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: isCompleted
-                  ? Icon(Icons.check,
-                      size: 14,
-                      color: theme.colorScheme.onPrimaryContainer)
-                  : isCurrent
-                      ? Icon(Icons.navigation_rounded,
-                          size: 14, color: theme.colorScheme.onPrimary)
-                      : Text(
-                          '${stop.stopNumber}',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              stop.name,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
-                color:
-                    isCompleted ? theme.colorScheme.onSurfaceVariant : null,
-                decoration:
-                    isCompleted ? TextDecoration.lineThrough : null,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildNavCard(ThemeData theme) {
-    final info = _navigationInfo!;
+    if (_simulator == null && _remainingKm == 0) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface.withValues(alpha: 0.95),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 16),
+            Text('Calculating route...', style: theme.textTheme.bodyMedium),
+          ],
+        ),
+      );
+    }
+
+    final isComplete = _notificationMessage == 'All stops completed';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -657,80 +544,78 @@ class _DriverMapPageState extends State<DriverMapPage> {
           ),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.navigation_rounded,
-              color: theme.colorScheme.onPrimaryContainer,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  info.instruction,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer,
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  info.formattedDetail,
-                  style: theme.textTheme.bodyMedium,
+                child: Icon(
+                  _completedStops.isNotEmpty
+                      ? Icons.navigation_rounded
+                      : Icons.route_rounded,
+                  color: theme.colorScheme.onPrimaryContainer,
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isComplete
+                          ? 'All deliveries completed'
+                          : _completedStops.isNotEmpty
+                              ? 'Navigating to next stop'
+                              : 'En route to destination',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${_remainingKm.toStringAsFixed(1)} km • $_etaMinutes min',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    if (_completedStops.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '${_completedStops.length} stop${_completedStops.length > 1 ? 's' : ''} completed',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
+          if (!isComplete) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _endNavigation,
+                icon: const Icon(Icons.stop_circle_outlined, size: 16),
+                label: const Text('End navigation'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                  side: BorderSide(color: theme.colorScheme.error.withValues(alpha: 0.5)),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
-  }
-}
-
-class _DeliveryStop {
-  const _DeliveryStop({
-    required this.position,
-    required this.name,
-    required this.stopNumber,
-    required this.totalStops,
-  });
-
-  final LatLng position;
-  final String name;
-  final int stopNumber;
-  final int totalStops;
-}
-
-class _NavigationInfo {
-  const _NavigationInfo({
-    required this.instruction,
-    required this.distanceKm,
-    required this.etaMinutes,
-    this.stopLabel,
-  });
-
-  final String instruction;
-  final double distanceKm;
-  final int etaMinutes;
-  final String? stopLabel;
-
-  String get formattedDetail {
-    final parts = <String>[
-      '${distanceKm.toStringAsFixed(1)} km',
-      '$etaMinutes min',
-    ];
-    if (stopLabel != null) {
-      parts.insert(0, stopLabel!);
-    }
-    return parts.join(' • ');
   }
 }

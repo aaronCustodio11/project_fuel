@@ -97,8 +97,8 @@
     "password": "Passw0rd!",
     "plateNumber": "JKL 3456",
     "location": {
-      "latitude": 13.7898,
-      "longitude": 121.0692
+      "latitude": 13.941,
+      "longitude": 121.162
     }
   },
   {
@@ -165,8 +165,42 @@
     "password": "Passw0rd!",
     "plateNumber": "",
     "location": {
-      "latitude": 13.7910,
-      "longitude": 121.0712
+      "latitude": 13.941,
+      "longitude": 121.162
+    }
+  },
+  {
+    "userId": 11,
+    "firstName": "Ricardo",
+    "middleName": "",
+    "surName": "Santos",
+    "extensionName": "",
+    "company": "FleetSense Transport",
+    "role": "Driver",
+    "supplierId": 10,
+    "email": "ricardo.santos@fleetsense.ph",
+    "password": "Passw0rd!",
+    "plateNumber": "STU 5678",
+    "location": {
+      "latitude": 13.941,
+      "longitude": 121.162
+    }
+  },
+  {
+    "userId": 12,
+    "firstName": "Pedro",
+    "middleName": "",
+    "surName": "Gonzales",
+    "extensionName": "",
+    "company": "FleetSense Transport",
+    "role": "Driver",
+    "supplierId": 10,
+    "email": "pedro.gonzales@fleetsense.ph",
+    "password": "Passw0rd!",
+    "plateNumber": "VWX 9012",
+    "location": {
+      "latitude": 13.758,
+      "longitude": 121.058
     }
   }
 ]

@@ -15,13 +15,14 @@ class DriverScreen extends StatefulWidget {
 
 class _DriverScreenState extends State<DriverScreen> {
   int _selectedIndex = 0;
+  Set<String> _routeDeliveryIds = {};
 
-  final List<Widget> _pages = const [
-    DriverMapPage(),
-    VehicleMaintenancePage(),
-    DriverDeliveriesPage(),
-    ProfileScreenPage(),
-  ];
+  void _startRoute(Set<String> deliveryIds) {
+    setState(() {
+      _routeDeliveryIds = deliveryIds;
+      _selectedIndex = 0;
+    });
+  }
 
   @override
   void initState() {
@@ -36,7 +37,19 @@ class _DriverScreenState extends State<DriverScreen> {
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
-        children: _pages,
+        children: [
+          DriverMapPage(
+            initialSelectedDeliveryIds: _routeDeliveryIds,
+            onNavigationEnd: () => setState(() => _routeDeliveryIds = {}),
+          ),
+          DriverDeliveriesPage(
+            activeRouteDeliveryIds: _routeDeliveryIds,
+            onStartRoute: _startRoute,
+            onViewMap: () => setState(() => _selectedIndex = 0),
+          ),
+          const VehicleMaintenancePage(),
+          const ProfileScreenPage(),
+        ],
       ),
       bottomNavigationBar: FleetBottomNavBar(
         selectedIndex: _selectedIndex,

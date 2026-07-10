@@ -2,7 +2,7 @@
   {
     "stationId": "STN-001",
     "name": "FleetSense Depot Batangas City",
-    "type": "warehouse",
+    "type": "depot",
     "lat": 13.7580,
     "lng": 121.0580,
     "address": "Batangas City Port Area",
@@ -48,18 +48,6 @@
     "supplierId": 9
   },
   {
-    "stationId": "STN-005",
-    "name": "Batangas Port Terminal",
-    "type": "warehouse",
-    "lat": 13.7595,
-    "lng": 121.0583,
-    "address": "Batangas City Port Area",
-    "capacity": 60000,
-    "currentStock": 45000,
-    "managerId": 7,
-    "supplierId": 10
-  },
-  {
     "stationId": "STN-006",
     "name": "Petron Batangas City",
     "type": "gasStation",
@@ -98,7 +86,7 @@
   {
     "stationId": "STN-009",
     "name": "FleetSense Depot Lipa",
-    "type": "warehouse",
+    "type": "depot",
     "lat": 13.9410,
     "lng": 121.1620,
     "address": "Lipa City, Batangas",

@@ -8,6 +8,7 @@ import 'package:project_fuel/core/models/fleet_tracking.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/deliveries.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
+import 'package:project_fuel/core/services/navigation_simulator.dart';
 import 'package:project_fuel/core/services/osrm_routing.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:project_fuel/shared/widgets/action_button.dart';
@@ -39,10 +40,22 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
   List<LatLng>? _routePoints;
   bool _isLoadingRoute = false;
 
+  final Map<String, NavigationSimulator> _simulators = {};
+  final Map<String, LatLng> _livePositions = {};
+
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    for (final s in _simulators.values) {
+      s.dispose();
+    }
+    _simulators.clear();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -77,6 +90,7 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
             : null;
         _isLoading = false;
       });
+      _startSimulations();
       WidgetsBinding.instance.addPostFrameCallback((_) => _fitMapToMarkers());
     }
   }
@@ -227,6 +241,60 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
     });
   }
 
+  Future<void> _startSimulations() async {
+    final enRouteTrucks = _trucks.where((t) => t.status == TruckStatus.moving).toList();
+    if (enRouteTrucks.isEmpty) return;
+
+    final deliveries = await _deliveryService.getAllDeliveries();
+
+    for (final truck in enRouteTrucks) {
+      final truckDeliveries = deliveries.where((d) => d.truckId == truck.id).toList();
+      if (truckDeliveries.isEmpty) continue;
+
+      truckDeliveries.sort((a, b) {
+        const order = {'inProgress': 0, 'scheduled': 1, 'completed': 2};
+        return (order[a.status] ?? 3).compareTo(order[b.status] ?? 3);
+      });
+
+      final stops = <NavigationStop>[];
+      for (final d in truckDeliveries) {
+        if (d.status == 'completed') continue;
+        stops.add(NavigationStop(
+          id: d.id,
+          name: d.stationName,
+          position: LatLng(d.stationLat, d.stationLng),
+        ));
+      }
+      if (stops.isEmpty) continue;
+
+      final waypoints = [truck.position, ...stops.map((s) => s.position)];
+      final result = await _routingService.getRoute(waypoints: waypoints);
+      if (!mounted) return;
+      if (result == null) continue;
+
+      final speed = truck.speed ?? 40;
+
+      final simulator = NavigationSimulator(
+        route: result.polyline,
+        stops: stops,
+        speedKph: speed,
+        tickMs: 2000,
+        arrivalThresholdKm: 0.1,
+      );
+
+      simulator.state.addListener(() {
+        if (!mounted) return;
+        final navState = simulator.state.value;
+        setState(() {
+          _livePositions[truck.id] = navState.currentPosition;
+        });
+      });
+
+      _simulators[truck.id] = simulator;
+      simulator.start();
+    }
+  }
+
   Color _truckStatusColor(TruckStatus s) => switch (s) {
     TruckStatus.moving => AppTheme.successGreen,
     TruckStatus.idle => AppTheme.warningAmber,
@@ -348,11 +416,12 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
   }
 
   Marker _buildTruckMarker(FleetTruck truck) {
+    final pos = _livePositions[truck.id] ?? truck.position;
     final color = _truckStatusColor(truck.status);
     final selected = _selectedItem == truck;
     final size = selected ? 56.0 : 48.0;
     return Marker(
-      point: truck.position,
+      point: pos,
       width: size + 8,
       height: size + 8,
       child: AnimatedContainer(
