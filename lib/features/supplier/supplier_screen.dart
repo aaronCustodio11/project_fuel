@@ -35,7 +35,7 @@ class _SupplierScreenState extends State<SupplierScreen> {
     const SupplierFuelMonitoring(),
     const SupplierFleetTracking(),
     const SupplierTheftDetection(),
-    const ProfileView(),
+    const ProfileView(isDesktop: true),
   ];
 
   void _onNavigate(int index) => setState(() => _selectedIndex = index);

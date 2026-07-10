@@ -230,9 +230,12 @@ class ThemeProvider extends InheritedNotifier<ValueNotifier<ThemeMode>> {
         .dependOnInheritedWidgetOfExactType<ThemeProvider>();
     assert(provider != null, 'No ThemeProvider found in context');
     final notifier = provider!.notifier!;
-    notifier.value = notifier.value == ThemeMode.light
-        ? ThemeMode.dark
-        : ThemeMode.light;
+    notifier.value = switch (notifier.value) {
+      ThemeMode.system => ThemeMode.light,
+      ThemeMode.light => ThemeMode.dark,
+      ThemeMode.dark => ThemeMode.system,
+      _ => ThemeMode.system,
+    };
   }
 
   static void setThemeMode(BuildContext context, ThemeMode mode) {
