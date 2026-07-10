@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 
@@ -78,7 +79,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Manage your entire fuel supply operation from one central hub. '
           'Track fleets, monitor users, and keep your business running '
           'efficiently.',
-      imagePath: 'assets/images/logo/logo.jpg',
+      imagePath: 'assets/images/logo/logo.svg',
     ),
     _OnboardingPageData(
       icon: Icons.dashboard_outlined,
@@ -150,7 +151,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Oversee fuel station operations with real-time insights and '
           'control. Monitor fuel levels, detect issues, and manage your '
           'station efficiently.',
-      imagePath: 'assets/images/logo/logo.jpg',
+      imagePath: 'assets/images/logo/logo.svg',
     ),
     _OnboardingPageData(
       icon: Icons.dashboard_outlined,
@@ -203,7 +204,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Your all-in-one tool for managing fuel deliveries on the road. '
           'Navigate routes, track deliveries, and keep your truck in top '
           'condition.',
-      imagePath: 'assets/images/logo/logo.jpg',
+      imagePath: 'assets/images/logo/logo.svg',
     ),
     _OnboardingPageData(
       icon: Icons.map_outlined,
@@ -439,7 +440,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
             flex: 6,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(FleetRadius.md),
-              child: Image.asset(
+              child: SvgPicture.asset(
                 data.imagePath!,
                 fit: BoxFit.contain,
                 alignment: Alignment.center,
@@ -517,7 +518,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
 
     final imageSide = ClipRRect(
       borderRadius: BorderRadius.circular(FleetRadius.md),
-      child: Image.asset(
+      child: SvgPicture.asset(
         data.imagePath!,
         fit: BoxFit.contain,
         alignment: Alignment.center,

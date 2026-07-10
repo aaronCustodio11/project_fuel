@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:project_fuel/core/routes/app_routes.dart';
 import 'package:project_fuel/core/services/authentication.dart';
@@ -53,8 +54,8 @@ class _SplashScreenPageState extends State<SplashScreenPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset(
-                'assets/images/logo/logo.jpg',
+              SvgPicture.asset(
+                'assets/images/logo/logo.svg',
                 width: 88,
                 height: 88,
                 fit: BoxFit.contain,

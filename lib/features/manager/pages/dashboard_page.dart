@@ -17,7 +17,8 @@ class ManagerDashboard extends StatefulWidget {
   State<ManagerDashboard> createState() => _ManagerDashboardState();
 }
 
-class _ManagerDashboardState extends State<ManagerDashboard> {
+class _ManagerDashboardState extends State<ManagerDashboard>
+    with SingleTickerProviderStateMixin {
   final _authService = AuthenticationService();
 
   AuthUser? _currentUser;
@@ -27,9 +28,20 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
   List<Map<String, dynamic>> _stations = [];
   List<Map<String, dynamic>> _theftAlerts = [];
 
+  late final AnimationController _gradientController;
+  late final Animation<double> _gradientAnim;
+
   @override
   void initState() {
     super.initState();
+    _gradientController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..repeat(reverse: true);
+    _gradientAnim = CurvedAnimation(
+      parent: _gradientController,
+      curve: Curves.easeInOut,
+    );
     _loadData();
   }
 
@@ -152,6 +164,12 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     );
   }
 
+  @override
+  void dispose() {
+    _gradientController.dispose();
+    super.dispose();
+  }
+
   Widget _buildGreeting(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -161,16 +179,37 @@ class _ManagerDashboardState extends State<ManagerDashboard> {
     final greeting = isMorning ? 'Good Morning' : isAfternoon ? 'Good Afternoon' : 'Good Evening';
     final icon = isMorning ? Icons.wb_sunny_outlined : isAfternoon ? Icons.wb_cloudy_outlined : Icons.nightlight_outlined;
 
-    return Container(
-      padding: const EdgeInsets.all(FleetSpacing.lg),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [scheme.primary, scheme.primary.withValues(alpha: 0.8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(FleetRadius.md),
-      ),
+    return AnimatedBuilder(
+      animation: _gradientAnim,
+      builder: (context, child) {
+        final begin = Alignment.lerp(
+          Alignment.topLeft,
+          const Alignment(-0.3, -0.3),
+          _gradientAnim.value,
+        )!;
+        final end = Alignment.lerp(
+          Alignment.bottomRight,
+          const Alignment(1.2, 1.2),
+          _gradientAnim.value,
+        )!;
+
+        final gradientColors = scheme.brightness == Brightness.dark
+            ? [scheme.primary, scheme.primaryContainer]
+            : [scheme.primary, scheme.onPrimaryContainer];
+
+        return Container(
+          padding: const EdgeInsets.all(FleetSpacing.lg),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradientColors,
+              begin: begin,
+              end: end,
+            ),
+            borderRadius: BorderRadius.circular(FleetRadius.md),
+          ),
+          child: child,
+        );
+      },
       child: Row(
         children: [
           _AnimatedWeatherIcon(icon: icon),

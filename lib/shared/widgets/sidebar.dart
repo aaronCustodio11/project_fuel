@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:project_fuel/core/routes/app_routes.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:sidebarx/sidebarx.dart';
@@ -148,6 +149,7 @@ class _SidebarState extends State<Sidebar> {
 
   Widget _buildHeader(BuildContext context, bool extended) {
     final isDark = _lastBrightness == Brightness.dark;
+    final bgColor = Theme.of(context).colorScheme.surfaceContainerLow;
 
     return SizedBox(
       height: 100,
@@ -155,23 +157,30 @@ class _SidebarState extends State<Sidebar> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Image.asset(
-                'assets/images/logo/logo.jpg',
-                width: 36,
-                height: 36,
-                fit: BoxFit.cover,
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(7),
+                child: SvgPicture.asset(
+                  'assets/images/logo/logo.svg',
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
             if (extended) ...[
               const SizedBox(height: FleetSpacing.xs),
               Text(
-                'FleetSense',
+                'FLEET SENSE',
                 style: TextStyle(
                   color: isDark ? Colors.white : Colors.black,
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
+                  letterSpacing: 1.5,
                 ),
               ),
             ],
