@@ -40,6 +40,8 @@ class _DriverMapPageState extends State<DriverMapPage> {
   double _remainingKm = 0;
   int _etaMinutes = 0;
   bool _followDriver = true;
+  bool _headingUp = true;
+  double _rotationDegrees = 0.0;
 
   @override
   void initState() {
@@ -184,6 +186,8 @@ class _DriverMapPageState extends State<DriverMapPage> {
 
     setState(() => _routePoints = result.polyline);
 
+    _mapController.move(_driverPosition!, 19.0);
+
     _simulator = NavigationSimulator(
       route: result.polyline,
       stops: stops,
@@ -208,6 +212,14 @@ class _DriverMapPageState extends State<DriverMapPage> {
 
       if (_followDriver) {
         _mapController.move(s.currentPosition, _mapController.camera.zoom);
+        if (_headingUp && _routePoints != null) {
+          final idx = s.routeIndex;
+          if (idx < _routePoints!.length - 1) {
+            final heading = _computeHeading(_routePoints![idx], _routePoints![idx + 1]);
+            _mapController.rotate(-heading);
+            _rotationDegrees = -heading;
+          }
+        }
       }
 
       if (s.isComplete) {
@@ -232,14 +244,12 @@ class _DriverMapPageState extends State<DriverMapPage> {
     widget.onNavigationEnd?.call();
   }
 
-  void _centerOnDriver() {
-    if (_driverPosition == null) return;
-    _mapController.move(_driverPosition!, _mapController.camera.zoom);
-    setState(() => _followDriver = true);
-  }
-
   void _onMapEvent(MapEvent event) {
+    if (event is MapEventRotateEnd) {
+      setState(() => _rotationDegrees = _mapController.camera.rotation);
+    }
     if (event is MapEventMoveEnd || event is MapEventFlingAnimationEnd) {
+      setState(() => _rotationDegrees = _mapController.camera.rotation);
       if (_followDriver) {
         setState(() => _followDriver = false);
       }
@@ -260,6 +270,16 @@ class _DriverMapPageState extends State<DriverMapPage> {
     return earthRadius * 2 * math.atan2(math.sqrt(x), math.sqrt(1 - x));
   }
 
+  double _computeHeading(LatLng from, LatLng to) {
+    final dLng = (to.longitude - from.longitude) * (math.pi / 180);
+    final lat1 = from.latitude * (math.pi / 180);
+    final lat2 = to.latitude * (math.pi / 180);
+    final y = math.sin(dLng) * math.cos(lat2);
+    final x = math.cos(lat1) * math.sin(lat2) -
+        math.sin(lat1) * math.cos(lat2) * math.cos(dLng);
+    return math.atan2(y, x) * (180 / math.pi);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -275,7 +295,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
       );
     }
 
-    final markers = <Marker>[];
+    var markers = <Marker>[];
 
     if (_driverPosition != null) {
       markers.add(
@@ -336,6 +356,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
       }
     }
 
+
     final tileUrl = theme.brightness == Brightness.dark
         ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
         : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -393,7 +414,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
                 urlTemplate: tileUrl,
                 userAgentPackageName: 'com.example.project_fuel',
               ),
-              MarkerLayer(markers: markers),
+              MarkerLayer(rotate: true, markers: markers),
               PolylineLayer(polylines: polylines),
             ],
           ),
@@ -431,7 +452,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
             ),
           Positioned(
             right: 16,
-            bottom: _isNavigating ? 120 : 24,
+            bottom: _isNavigating ? 190 : 24,
             child: _buildMapControls(theme),
           ),
         ],
@@ -483,23 +504,93 @@ class _DriverMapPageState extends State<DriverMapPage> {
   }
 
   Widget _buildMapControls(ThemeData theme) {
+    final showCompass = !_headingUp && _rotationDegrees.abs() >= 0.5;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        FloatingActionButton.small(
-          heroTag: 'locate',
-          onPressed: _centerOnDriver,
-          backgroundColor: _followDriver
-              ? theme.colorScheme.primary
-              : theme.colorScheme.surface,
-          tooltip: 'Center on driver',
-          child: Icon(
-            Icons.my_location_rounded,
-            color: _followDriver
-                ? theme.colorScheme.onPrimary
-                : theme.colorScheme.primary,
+        AnimatedOpacity(
+          opacity: showCompass ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 200),
+          child: FloatingActionButton.small(
+            heroTag: 'compass',
+            onPressed: () {
+              _mapController.rotate(0.0);
+              setState(() => _rotationDegrees = 0.0);
+            },
+            backgroundColor: theme.colorScheme.surface,
+            child: Transform.rotate(
+              angle: -_rotationDegrees * (math.pi / 180),
+              child: const Text(
+                'N',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
           ),
         ),
+        const SizedBox(height: 8),
+        _isNavigating
+            ? FloatingActionButton.extended(
+                heroTag: 'locate',
+                onPressed: () {
+                  if (_driverPosition == null) return;
+                  double heading = 0.0;
+                  if (_simulator != null && _routePoints != null) {
+                    final idx = _simulator!.state.value.routeIndex;
+                    if (idx < _routePoints!.length - 1) {
+                      heading = _computeHeading(_routePoints![idx], _routePoints![idx + 1]);
+                    }
+                  }
+                  _mapController.move(_driverPosition!, 19.0);
+                  _mapController.rotate(-heading);
+                  setState(() {
+                    _followDriver = true;
+                    _headingUp = true;
+                    _rotationDegrees = 0.0;
+                  });
+                },
+                backgroundColor: _followDriver
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.surface,
+                icon: Icon(
+                  Icons.navigation_rounded,
+                  color: _followDriver
+                      ? theme.colorScheme.onPrimary
+                      : theme.colorScheme.primary,
+                  size: 20,
+                ),
+                label: Text(
+                  'Re-center',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _followDriver
+                        ? theme.colorScheme.onPrimary
+                        : theme.colorScheme.primary,
+                  ),
+                ),
+              )
+            : FloatingActionButton.small(
+                heroTag: 'locate',
+                onPressed: () {
+                  if (_driverPosition == null) return;
+                  _mapController.move(_driverPosition!, _mapController.camera.zoom);
+                  setState(() {
+                    _followDriver = true;
+                    _headingUp = true;
+                    _rotationDegrees = 0.0;
+                  });
+                },
+                backgroundColor: _followDriver
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.surface,
+                tooltip: 'Center on driver',
+                child: Icon(
+                  Icons.my_location_rounded,
+                  color: _followDriver
+                      ? theme.colorScheme.onPrimary
+                      : theme.colorScheme.primary,
+                ),
+              ),
       ],
     );
   }
@@ -619,3 +710,5 @@ class _DriverMapPageState extends State<DriverMapPage> {
     );
   }
 }
+
+

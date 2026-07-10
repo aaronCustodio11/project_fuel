@@ -43,6 +43,7 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
   final Map<String, NavigationSimulator> _simulators = {};
   final Map<String, LatLng> _livePositions = {};
 
+
   @override
   void initState() {
     super.initState();
@@ -504,12 +505,8 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
               ),
               onMapEvent: _onMapEvent,
             ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.example.project_fuel',
-              ),
-              MarkerLayer(markers: [
+            children: (() {
+              var mapMarkers = <Marker>[
                 if (_userPosition != null)
                   Marker(
                     point: _userPosition!,
@@ -539,18 +536,27 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
                   ..._trucks.map(_buildTruckMarker),
                   ..._stations.map(_buildStationMarker),
                 ],
-              ]),
-              if (_routePoints != null && _routePoints!.length >= 2)
-                PolylineLayer(polylines: [
-                  Polyline(
-                    points: _routePoints!,
-                    color: Theme.of(context).colorScheme.secondary,
-                    strokeWidth: 4,
-                    borderColor: Colors.white,
-                    borderStrokeWidth: 2,
-                  ),
-                ]),
-            ],
+              ];
+
+
+              return <Widget>[
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.project_fuel',
+                ),
+                MarkerLayer(rotate: true, markers: mapMarkers),
+                if (_routePoints != null && _routePoints!.length >= 2)
+                  PolylineLayer(polylines: [
+                    Polyline(
+                      points: _routePoints!,
+                      color: Theme.of(context).colorScheme.secondary,
+                      strokeWidth: 4,
+                      borderColor: Colors.white,
+                      borderStrokeWidth: 2,
+                    ),
+                  ]),
+              ];
+            })(),
           ),
         ),
         if (_userPosition != null)
@@ -2012,5 +2018,7 @@ class _TypeToggle extends StatelessWidget {
     );
   }
 }
+
+
 
 

@@ -6,7 +6,7 @@
     "product": "Diesel",
     "quantity": 4000,
     "unit": "liters",
-    "status": "inProgress",
+    "status": "scheduled",
     "scheduledDate": "2026-07-06T08:00:00.000",
     "completedDate": null,
     "sourceStation": "STN-001",

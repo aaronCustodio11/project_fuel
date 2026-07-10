@@ -6,12 +6,12 @@
     "supplierId": 9,
     "fuelLevel": 0.85,
     "tankCapacity": 12000,
-    "status": "En Route",
-    "speedKph": 42,
-    "heading": 180,
+    "status": "Idle",
+    "speedKph": 0,
+    "heading": 0,
     "currentLocation": {
-      "latitude": 13.763,
-      "longitude": 121.052
+      "latitude": 13.758,
+      "longitude": 121.058
     },
     "deliveries": []
   },
