@@ -23,7 +23,7 @@ class _ManagerScreenState extends State<ManagerScreen> {
     const ManagerFuelMonitoring(),
     const ManagerFleetTracking(),
     const ManagerTheftDetection(),
-    const ProfileView(),
+    const ProfileView(isDesktop: true),
   ];
 
   @override

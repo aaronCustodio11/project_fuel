@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 
 enum OnboardingRole { supplier, manager, driver }
@@ -712,7 +713,7 @@ class _ThemeSetupPageState extends State<_ThemeSetupPage> {
                     subtitle: 'Match your device settings',
                     onChanged: (v) {
                       setState(() => _selectedTheme = v);
-                      ThemeProvider.setThemeMode(context, v);
+                      _applyThemeWithLoading(context, v);
                     },
                   ),
                   const SizedBox(height: FleetSpacing.xs),
@@ -724,7 +725,7 @@ class _ThemeSetupPageState extends State<_ThemeSetupPage> {
                     subtitle: 'Always light mode',
                     onChanged: (v) {
                       setState(() => _selectedTheme = v);
-                      ThemeProvider.setThemeMode(context, v);
+                      _applyThemeWithLoading(context, v);
                     },
                   ),
                   const SizedBox(height: FleetSpacing.xs),
@@ -736,7 +737,7 @@ class _ThemeSetupPageState extends State<_ThemeSetupPage> {
                     subtitle: 'Always dark mode',
                     onChanged: (v) {
                       setState(() => _selectedTheme = v);
-                      ThemeProvider.setThemeMode(context, v);
+                      _applyThemeWithLoading(context, v);
                     },
                   ),
                 ],
@@ -781,6 +782,46 @@ class _ThemeSetupPageState extends State<_ThemeSetupPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _applyThemeWithLoading(BuildContext ctx, ThemeMode mode) async {
+    final navigator = Navigator.of(ctx);
+    final theme = Theme.of(ctx);
+
+    showDialog(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: Center(
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(FleetSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LoadingAnimationWidget.staggeredDotsWave(color: theme.colorScheme.primary, size: 40),
+                  const SizedBox(height: FleetSpacing.lg),
+                  const Text('Hold on a second...'),
+                  const SizedBox(height: FleetSpacing.xs),
+                  Text(
+                    'Changing appearance mode',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
+    ThemeProvider.setThemeMode(ctx, mode);
+    navigator.pop();
   }
 }
 
