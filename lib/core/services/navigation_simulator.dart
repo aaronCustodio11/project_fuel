@@ -64,7 +64,7 @@ class NavigationSimulator {
     double arrivalThresholdKm = 0.05,
   })  : _route = List.from(route),
         _stops = List.unmodifiable(stops),
-        _speedKph = speedKph,
+        _speedKph = speedKph > 0 ? speedKph : 45,
         _tickMs = tickMs,
         _arrivalThresholdKm = arrivalThresholdKm,
         state = ValueNotifier<NavigationState>(

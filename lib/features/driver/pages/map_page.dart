@@ -12,9 +12,17 @@ import 'package:project_fuel/shared/widgets/role_badge.dart';
 
 class DriverMapPage extends StatefulWidget {
   final Set<String> initialSelectedDeliveryIds;
+  final Set<String> completedDeliveryIds;
+  final ValueChanged<Set<String>>? onDeliveryCompleted;
   final VoidCallback? onNavigationEnd;
 
-  const DriverMapPage({super.key, this.initialSelectedDeliveryIds = const {}, this.onNavigationEnd});
+  const DriverMapPage({
+    super.key,
+    this.initialSelectedDeliveryIds = const {},
+    this.completedDeliveryIds = const {},
+    this.onDeliveryCompleted,
+    this.onNavigationEnd,
+  });
 
   @override
   State<DriverMapPage> createState() => _DriverMapPageState();
@@ -42,6 +50,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
   bool _followDriver = true;
   bool _headingUp = true;
   double _rotationDegrees = 0.0;
+  List<String> _stopDeliveryIds = [];
 
   @override
   void initState() {
@@ -188,6 +197,8 @@ class _DriverMapPageState extends State<DriverMapPage> {
 
     _mapController.move(_driverPosition!, 19.0);
 
+    _stopDeliveryIds = stops.map((s) => s.id).toList();
+
     _simulator = NavigationSimulator(
       route: result.polyline,
       stops: stops,
@@ -221,12 +232,21 @@ class _DriverMapPageState extends State<DriverMapPage> {
           }
         }
       }
-
-      if (s.isComplete) {
-        _simulator!.dispose();
-        _simulator = null;
-      }
     });
+
+    if (s.lastCompletedStopIndex != null &&
+        s.lastCompletedStopIndex! < _stopDeliveryIds.length) {
+      final deliveryId = _stopDeliveryIds[s.lastCompletedStopIndex!];
+      final updated = Set<String>.from(widget.completedDeliveryIds)..add(deliveryId);
+      widget.onDeliveryCompleted?.call(updated);
+    }
+
+    if (s.isComplete) {
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!mounted) return;
+        _endNavigation();
+      });
+    }
   }
 
   void _endNavigation() {
@@ -240,6 +260,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
       _notificationMessage = null;
       _remainingKm = 0;
       _etaMinutes = 0;
+      _stopDeliveryIds = [];
     });
     widget.onNavigationEnd?.call();
   }
@@ -357,9 +378,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
     }
 
 
-    final tileUrl = theme.brightness == Brightness.dark
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    const tileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
     final polylines = <Polyline>[];
 
@@ -398,25 +417,28 @@ class _DriverMapPageState extends State<DriverMapPage> {
     return Scaffold(
       body: Stack(
         children: [
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter:
-                  _driverPosition ?? const LatLng(13.76, 121.06),
-              initialZoom: 14,
-              interactionOptions: const InteractionOptions(
-                flags: InteractiveFlag.all,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter:
+                    _driverPosition ?? const LatLng(13.76, 121.06),
+                initialZoom: 14,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all,
+                ),
+                onMapEvent: _onMapEvent,
               ),
-              onMapEvent: _onMapEvent,
+              children: [
+                TileLayer(
+                  urlTemplate: tileUrl,
+                  userAgentPackageName: 'com.example.project_fuel',
+                ),
+                MarkerLayer(rotate: true, markers: markers),
+                PolylineLayer(polylines: polylines),
+              ],
             ),
-            children: [
-              TileLayer(
-                urlTemplate: tileUrl,
-                userAgentPackageName: 'com.example.project_fuel',
-              ),
-              MarkerLayer(rotate: true, markers: markers),
-              PolylineLayer(polylines: polylines),
-            ],
           ),
           Positioned(
             bottom: 8,

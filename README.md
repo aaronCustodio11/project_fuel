@@ -24,7 +24,7 @@ lib/
 │   │   ├── deliveries.dart            # DeliveryService (3-way join)
 │   │   ├── json_reader.dart           # Reads mock JSON assets
 │   │   ├── maintenance_service.dart   # Maintenance record queries
-│   │   ├── navigation_simulator.dart  # Reusable ValueNotifier-based truck movement simulation
+│   │   ├── navigation_simulator.dart  # Reusable ValueNotifier-based truck movement simulation (driver + supplier fleet)
 │   │   └── osrm_routing.dart          # OSRM API client
 │   └── theme/
 │       └── app_theme.dart             # Light/dark Material 3, ThemeProvider
@@ -148,7 +148,7 @@ Each delivery has a `sourceStation` (the depot the truck loads from) and a `stat
 **Truck status & live simulation:**
 Truck status is driven by both static JSON data and runtime state. Trucks with `"En Route"` in `vehicles.json` map to `TruckStatus.moving` in the supplier fleet dashboard. On the driver's deliveries page, the truck status shows `"En Route"` when either an active navigation route is running or the static JSON status is `"En Route"`, and `"Idle"` otherwise.
 
-On the supplier fleet tracking page, en-route trucks are animated via `NavigationSimulator` — they move along OSRM routes from their current position through their in-progress and scheduled delivery stops. Simulators update positions every 2 seconds and trigger arrival notifications at each stop.
+On the supplier fleet tracking page, en-route trucks are animated via `NavigationSimulator` — they move along OSRM routes from their current position through their in-progress and scheduled delivery stops. Simulators update positions every 2 seconds and trigger arrival notifications at each stop. The simulator guards against `speedKph = 0` (falls back to 45 kph) to prevent division-by-zero Infinity errors in ETA calculations.
 
 No backend or real database is required.
 
@@ -168,24 +168,29 @@ On first login, each role sees a role-specific introduction overlay with feature
 
 ### Driver
 
-The driver shell uses a **bottom tab bar** with four tabs, preserving page state via `IndexedStack`. Routes are coordinated between the Deliveries and Map pages via shared `Set<String>` delivery IDs in the parent `DriverScreen`.
+The driver shell uses a **bottom tab bar** with four tabs, preserving page state via `IndexedStack`. Routes are coordinated between the Deliveries and Map pages via shared `Set<String>` delivery IDs in the parent `DriverScreen`. A `_completedDeliveryIds` set is also shared — the map page adds delivery IDs as stops are reached during simulation, and the deliveries page uses this set to override static JSON status for runtime-accurate display.
 
 **Deliveries** — two-phase interface for planning and starting delivery routes with per-truck status tracking.
 
-*View mode* — Shows four KPI cards (Total, Completed, En Route, Pending), truck info (speed, dynamic status), and a scrollable delivery history list (product name only, quantity hidden). Each tile shows a station-type-aware icon (depot icon for depots, gas pump icon for gas stations) and a status chip. Tapping a tile opens a detail bottom sheet with full info (source, type, dates, notes). A "Start Delivery" button in the bottom bar enters selection mode.
+*View mode* — Shows four KPI cards (Total, Completed, En Route, Pending), truck info (speed, dynamic status), and a delivery list split into two sections: **Active Deliveries** (scheduled/in-progress) and a collapsible **Delivery History** (completed). Each tile shows a station-type-aware icon (depot icon for depots, gas pump icon for gas stations) and a runtime-aware status chip. The history section shows the first 3 items by default with a "Show all" / "Show less" toggle. Tapping a tile opens a detail bottom sheet with full info (source, type, dates, notes). A "Start Delivery" button in the bottom bar enters selection mode.
 
 *Selection mode* — Checkboxes appear on each non-completed tile. The header changes to "Select destinations". The bottom bar shows Cancel, selected count, and a "Start Navigation" button. Tapping "Start Navigation" shows a non-dismissable loading dialog ("Calculating most efficient route...") before switching to the map.
 
 *Route active state* — When a route is active (navigation in progress on the map), a banner appears at the top of the delivery list showing "Route active — N destinations" with a "View on Map" button. The bottom bar shows a navigation button instead of "Start Delivery".
 
-**Map** — navigation interface with live position simulation via `NavigationSimulator`. Renders an interactive `flutter_map` with:
+*Runtime status* — Deliveries completed during simulation (via `NavigationSimulator` stop arrivals) are tracked in a `_completedDeliveryIds` set shared between the map and deliveries pages via the parent `DriverScreen`. The deliveries page overrides each tile's displayed status using this set — deliveries reached en route show as "Completed" without modifying the static JSON data. KPI counts adjust accordingly.
+
+**Map** — navigation interface with live position simulation via `NavigationSimulator`. Renders an interactive `flutter_map` inside a `ClipRRect` with rounded corners, using light OpenStreetMap tiles (consistent with the supplier fleet tracking page). Features:
 - Driver's current position marker (set from the truck's `currentLocation` in `vehicles.json`, updated in real-time by the simulator).
 - Source depot markers (blue warehouse icon) showing fuel origin points for deliveries.
 - Destination markers (orange gas pump icon) showing delivery stops.
-- OSRM route polyline between waypoints.
+- OSRM route polyline between waypoints, split into traveled (dimmed) and remaining (bright with white border) segments based on the simulator's `routeIndex`.
+- Map uses heading-up auto-rotation (driver direction faces up like a mini-map) with `MapCamera.rotate()`. A compass "N" button counter-rotates to stay upright and appears only when rotation exceeds 0.5° from north-up. A re-center extended FAB (navigation arrowhead icon + "Re-center") restores heading-up alignment.
+- All markers use `MarkerLayer(rotate: true)` — flutter_map's built-in `MobileLayerTransformer` rotates the marker container, and `MarkerLayer` counter-rotates each marker via `Transform.rotate(angle: -map.rotationRad)` to keep them screen-upright at all zoom/orientation states. Markers at identical positions stack naturally.
 - Navigation info card (distance, ETA, next stop) with an "End Navigation" button.
 - On stop arrival, a notification banner shows "Arrived at [station]".
-- When navigation ends (all stops complete or user taps "End Navigation"), the parent screen clears the active route, restoring the deliveries page to view mode via `onNavigationEnd` callback.
+- Runtime delivery completion is tracked per stop — when the simulator reaches a delivery destination, its ID is added to a shared `_completedDeliveryIds` set, overriding the static JSON status on the deliveries page.
+- When all stops complete, "All stops completed" shows for 2 seconds, then navigation auto-ends: route clears, parent `_routeDeliveryIds` resets, and the tab switches to the deliveries page.
 - A `ValueNotifier<NavigationState>` drives live driver position, completed stops, remaining distance, and ETA.
 - Only selected deliveries' markers appear during navigation; all driver deliveries show by default.
 
@@ -212,8 +217,9 @@ The supplier shell uses a **sidebar** with five pages, preserving page state via
 - Maintenance overview (scheduled/in progress/overdue/completed counts).
 
 **Fleet Tracking** — live fleet monitoring with automatic position simulation for en-route trucks:
-- Interactive map showing user location, color-coded truck markers (Moving/Idle/Maintenance/Off Duty), station markers, and context-aware side panel.
+- Interactive map showing user location, color-coded truck markers, station markers, and context-aware side panel. Moving trucks use green (`0xFF16A34A`), idle amber, maintenance red, off-duty gray. Gas station markers use orange, depot markers use blue (`0xFF1565C0`) — matching the driver map's color scheme. All markers use `MarkerLayer(rotate: true)` for screen-upright rendering regardless of map orientation. Markers at identical positions stack naturally.
 - En-route trucks (`TruckStatus.moving`) are automatically animated via `NavigationSimulator` — each moves along its OSRM route through in-progress and scheduled delivery stops, updating markers every 2 seconds.
+- When tracking a truck, the OSRM route polyline is rendered on the map, split into traveled (dimmed) and remaining (bright with white border) segments by looking up the truck's simulator `routeIndex` — matching the driver map's polyline behavior.
 - Five KPI cards (Total, Moving, Idle, Maintenance, Off Duty).
 - Context-aware side panel: truck list by default, detail panel on marker tap, delivery tracker panel when tracking a truck with live OSRM route.
 - "Add Location" dialog (map pin + type/name/address fields).

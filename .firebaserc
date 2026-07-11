@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "fleetsense-b805d"
+  },
+  "targets": {
+    "fleetsense-b805d": {
+      "hosting": {
+        "main-site": [
+          "fleetsense"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

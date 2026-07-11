@@ -273,7 +273,7 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
       if (!mounted) return;
       if (result == null) continue;
 
-      final speed = truck.speed ?? 40;
+      final speed = (truck.speed != null && truck.speed! > 0) ? truck.speed! : 40.0;
 
       final simulator = NavigationSimulator(
         route: result.polyline,
@@ -297,7 +297,7 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
   }
 
   Color _truckStatusColor(TruckStatus s) => switch (s) {
-    TruckStatus.moving => AppTheme.successGreen,
+    TruckStatus.moving => const Color(0xFF16A34A),
     TruckStatus.idle => AppTheme.warningAmber,
     TruckStatus.maintenance => AppTheme.dangerRed,
     TruckStatus.offDuty => AppTheme.neutralGray500,
@@ -347,7 +347,7 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
                     ActionButton(
                       icon: Icons.notifications_outlined,
                       label: 'Notify Truck',
-                      color: AppTheme.accentBlue,
+        color: Colors.orangeAccent,
                       onTap: _showNotifyTruckSheet,
                     ),
                   ],
@@ -455,7 +455,7 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
         height: size,
         child: RoleBadge(
           icon: isGas ? Icons.local_gas_station_rounded : Icons.warehouse_outlined,
-          color: isGas ? AppTheme.accentBlue : AppTheme.brandBlue,
+          color: isGas ? Colors.orangeAccent : const Color(0xFF1565C0),
           onTap: () => _onItemTap(station),
           borderWidth: selected ? 4 : 3,
           glowOpacity: selected ? 0.6 : 0.4,
@@ -539,22 +539,48 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
               ];
 
 
+              final routeScheme = Theme.of(context).colorScheme;
+              final routePolylines = <Polyline>[];
+              if (_routePoints != null && _routePoints!.length >= 2) {
+                final trackedSim = _trackingTruck != null ? _simulators[_trackingTruck!.id] : null;
+                final traveled = trackedSim?.state.value.routeIndex ?? 0;
+                if (traveled > 0 && traveled < _routePoints!.length) {
+                  routePolylines.add(
+                    Polyline(
+                      points: _routePoints!.sublist(0, traveled),
+                      color: routeScheme.outline.withValues(alpha: 0.3),
+                      strokeWidth: 4,
+                    ),
+                  );
+                  routePolylines.add(
+                    Polyline(
+                      points: _routePoints!.sublist(traveled),
+                      color: routeScheme.secondary,
+                      strokeWidth: 5,
+                      borderColor: Colors.white,
+                      borderStrokeWidth: 2,
+                    ),
+                  );
+                } else {
+                  routePolylines.add(
+                    Polyline(
+                      points: _routePoints!,
+                      color: routeScheme.secondary,
+                      strokeWidth: 5,
+                      borderColor: Colors.white,
+                      borderStrokeWidth: 2,
+                    ),
+                  );
+                }
+              }
+
               return <Widget>[
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.example.project_fuel',
                 ),
                 MarkerLayer(rotate: true, markers: mapMarkers),
-                if (_routePoints != null && _routePoints!.length >= 2)
-                  PolylineLayer(polylines: [
-                    Polyline(
-                      points: _routePoints!,
-                      color: Theme.of(context).colorScheme.secondary,
-                      strokeWidth: 4,
-                      borderColor: Colors.white,
-                      borderStrokeWidth: 2,
-                    ),
-                  ]),
+                PolylineLayer(polylines: routePolylines),
               ];
             })(),
           ),

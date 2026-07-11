@@ -7,12 +7,14 @@ import 'package:project_fuel/core/theme/app_theme.dart';
 class DriverDeliveriesPage extends StatefulWidget {
   final void Function(Set<String> deliveryIds)? onStartRoute;
   final Set<String> activeRouteDeliveryIds;
+  final Set<String> completedDeliveryIds;
   final VoidCallback? onViewMap;
 
   const DriverDeliveriesPage({
     super.key,
     this.onStartRoute,
     this.activeRouteDeliveryIds = const {},
+    this.completedDeliveryIds = const {},
     this.onViewMap,
   });
 
@@ -29,6 +31,7 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
   List<DeliveryModel> _deliveries = [];
   final Set<String> _selectedDeliveryIds = {};
   bool _isSelecting = false;
+  bool _showHistory = false;
 
   @override
   void initState() {
@@ -135,19 +138,27 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
     );
   }
 
+  String _effectiveStatus(DeliveryModel d) =>
+      widget.completedDeliveryIds.contains(d.id) ? 'completed' : d.status;
+
   Widget _buildContent(ThemeData theme) {
     final deliveries = _deliveries;
-    var total = 0, completed = 0, enRoute = 0, pending = 0;
+    final activeDeliveries = <DeliveryModel>[];
+    final historyDeliveries = <DeliveryModel>[];
     for (final d in deliveries) {
-      total++;
-      if (d.status == 'completed') {
-        completed++;
-      } else if (d.status == 'inProgress') {
-        enRoute++;
-      } else if (d.status == 'scheduled') {
-        pending++;
+      if (_effectiveStatus(d) == 'completed') {
+        historyDeliveries.add(d);
+      } else {
+        activeDeliveries.add(d);
       }
     }
+
+    final completedCount =
+        deliveries.where((d) => _effectiveStatus(d) == 'completed').length;
+    final enRouteCount =
+        deliveries.where((d) => _effectiveStatus(d) == 'inProgress').length;
+    final pendingCount =
+        deliveries.where((d) => _effectiveStatus(d) == 'scheduled').length;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -166,20 +177,20 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
         const SizedBox(height: FleetSpacing.md),
         Row(
           children: [
-            _buildStatCard(theme, 'Total', '$total', Icons.inventory_2_rounded,
+            _buildStatCard(theme, 'Total', '${deliveries.length}', Icons.inventory_2_rounded,
                 theme.colorScheme.secondaryContainer),
             const SizedBox(width: FleetSpacing.sm),
-            _buildStatCard(theme, 'Completed', '$completed',
+            _buildStatCard(theme, 'Completed', '$completedCount',
                 Icons.check_circle_rounded, AppTheme.successGreen.withValues(alpha: 0.15)),
           ],
         ),
         const SizedBox(height: FleetSpacing.sm),
         Row(
           children: [
-            _buildStatCard(theme, 'En Route', '$enRoute',
+            _buildStatCard(theme, 'En Route', '$enRouteCount',
                 Icons.local_shipping_rounded, theme.colorScheme.tertiaryContainer),
             const SizedBox(width: FleetSpacing.sm),
-            _buildStatCard(theme, 'Pending', '$pending',
+            _buildStatCard(theme, 'Pending', '$pendingCount',
                 Icons.schedule_rounded, theme.colorScheme.surfaceContainerHighest),
           ],
         ),
@@ -194,14 +205,38 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
           _buildRouteActiveBanner(theme),
         ],
         const SizedBox(height: FleetSpacing.lg),
-        Text(
-          _isSelecting ? 'Select destinations' : 'Delivery History',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
+        if (_isSelecting) ...[
+          Text(
+            'Select destinations',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-        const SizedBox(height: FleetSpacing.sm),
-        ...deliveries.map((d) => _buildDeliveryTile(theme, d)),
+          const SizedBox(height: FleetSpacing.sm),
+          ...activeDeliveries.map((d) => _buildDeliveryTile(theme, d)),
+        ] else ...[
+          Text(
+            'Active Deliveries',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: FleetSpacing.sm),
+          if (activeDeliveries.isNotEmpty)
+            ...activeDeliveries.map((d) => _buildDeliveryTile(theme, d))
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text(
+                'No active deliveries',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          const SizedBox(height: FleetSpacing.lg),
+          _buildHistorySection(theme, historyDeliveries),
+        ],
         if (deliveries.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 32),
@@ -212,6 +247,63 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildHistorySection(ThemeData theme, List<DeliveryModel> history) {
+    if (history.isEmpty) return const SizedBox.shrink();
+
+    const previewCount = 3;
+    final isCollapsed = !_showHistory;
+    final displayList = isCollapsed ? history.take(previewCount).toList() : history;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => setState(() => _showHistory = !_showHistory),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                Text(
+                  'Delivery History (${history.length})',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  isCollapsed ? Icons.expand_more : Icons.expand_less,
+                  size: 20,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: FleetSpacing.sm),
+        ...displayList.map((d) => _buildDeliveryTile(theme, d)),
+        if (isCollapsed && history.length > previewCount)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: TextButton.icon(
+              onPressed: () => setState(() => _showHistory = true),
+              icon: const Icon(Icons.expand_more, size: 18),
+              label: Text('Show all (${history.length})'),
+            ),
+          )
+        else if (!isCollapsed && history.length > previewCount)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: TextButton.icon(
+              onPressed: () => setState(() => _showHistory = false),
+              icon: const Icon(Icons.expand_less, size: 18),
+              label: const Text('Show less'),
             ),
           ),
       ],
@@ -445,7 +537,12 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
                 ),
               ),
               const SizedBox(height: FleetSpacing.md),
-              _buildDetailRow(t, Icons.schedule_rounded, 'Status', delivery.statusLabel),
+              _buildDetailRow(t, Icons.schedule_rounded, 'Status',
+                  _effectiveStatus(delivery) == 'completed'
+                      ? 'Completed'
+                      : _effectiveStatus(delivery) == 'inProgress'
+                          ? 'In Progress'
+                          : 'Scheduled'),
               if (delivery.sourceStationName.isNotEmpty)
                 _buildDetailRow(t, Icons.warehouse_rounded, 'Source', delivery.sourceStationName),
               if (delivery.stationType.isNotEmpty)
@@ -489,20 +586,25 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
 
   Widget _buildDeliveryTile(ThemeData theme, DeliveryModel delivery) {
     final isSelected = _selectedDeliveryIds.contains(delivery.id);
-    final isCompleted = delivery.status == 'completed';
+    final effectiveStatus = _effectiveStatus(delivery);
+    final isCompleted = effectiveStatus == 'completed';
 
     Color statusColor;
     IconData statusIcon;
-    switch (delivery.status) {
+    String statusLabel;
+    switch (effectiveStatus) {
       case 'completed':
         statusColor = AppTheme.successGreen;
         statusIcon = Icons.check_circle_rounded;
+        statusLabel = 'Completed';
       case 'inProgress':
         statusColor = AppTheme.warningAmber;
         statusIcon = Icons.local_shipping_rounded;
+        statusLabel = 'In Progress';
       default:
         statusColor = theme.colorScheme.onSurfaceVariant;
         statusIcon = Icons.schedule_rounded;
+        statusLabel = 'Scheduled';
     }
 
     return Card(
@@ -537,7 +639,9 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
+                  color: isCompleted
+                      ? theme.colorScheme.surfaceContainerHighest
+                      : theme.colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -586,7 +690,7 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
                     Icon(statusIcon, size: 12, color: statusColor),
                     const SizedBox(width: 4),
                     Text(
-                      delivery.statusLabel,
+                      statusLabel,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: statusColor,
                         fontWeight: FontWeight.w600,

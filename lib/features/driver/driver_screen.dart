@@ -16,12 +16,17 @@ class DriverScreen extends StatefulWidget {
 class _DriverScreenState extends State<DriverScreen> {
   int _selectedIndex = 0;
   Set<String> _routeDeliveryIds = {};
+  Set<String> _completedDeliveryIds = {};
 
   void _startRoute(Set<String> deliveryIds) {
     setState(() {
       _routeDeliveryIds = deliveryIds;
       _selectedIndex = 0;
     });
+  }
+
+  void _onDeliveryCompleted(Set<String> completedIds) {
+    setState(() => _completedDeliveryIds = completedIds);
   }
 
   @override
@@ -40,10 +45,16 @@ class _DriverScreenState extends State<DriverScreen> {
         children: [
           DriverMapPage(
             initialSelectedDeliveryIds: _routeDeliveryIds,
-            onNavigationEnd: () => setState(() => _routeDeliveryIds = {}),
+            completedDeliveryIds: _completedDeliveryIds,
+            onDeliveryCompleted: _onDeliveryCompleted,
+            onNavigationEnd: () => setState(() {
+              _routeDeliveryIds = {};
+              _selectedIndex = 1;
+            }),
           ),
           DriverDeliveriesPage(
             activeRouteDeliveryIds: _routeDeliveryIds,
+            completedDeliveryIds: _completedDeliveryIds,
             onStartRoute: _startRoute,
             onViewMap: () => setState(() => _selectedIndex = 0),
           ),

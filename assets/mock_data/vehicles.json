@@ -22,7 +22,7 @@
     "supplierId": 9,
     "fuelLevel": 0.34,
     "tankCapacity": 12000,
-    "status": "Idle",
+    "status": "En Route",
     "speedKph": 0,
     "heading": 0,
     "currentLocation": {
