@@ -108,6 +108,13 @@ input, textarea { font-family: inherit; }
   white-space: nowrap;
 }
 .btn:active { transform: scale(0.97); }
+.btn:disabled,
+.btn.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  transform: none !important;
+  filter: grayscale(0.4);
+}
 
 .btn-primary {
   background: linear-gradient(135deg, var(--grad-2), var(--grad-4));
@@ -1005,4 +1012,503 @@ input, textarea { font-family: inherit; }
   .trusted-logos { gap: 16px; }
   .contact-form { padding: 28px 22px; }
   .phone-mock { width: 200px; height: 350px; }
+}
+
+/* =========================================================
+   SUBSCRIBE / CHECKOUT MODAL
+   ========================================================= */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(20, 24, 34, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition), visibility var(--transition);
+}
+.modal-overlay.open { opacity: 1; visibility: visible; }
+
+.modal-box {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 62px 44px 34px;
+  transform: translateY(24px) scale(0.98);
+  transition: transform var(--transition);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal-overlay.open .modal-box { transform: translateY(0) scale(1); }
+
+.modal-close {
+  position: absolute;
+  top: 20px; right: 20px;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary);
+  background: rgba(42,42,42,0.05);
+  transition: background var(--transition), color var(--transition), transform var(--transition);
+}
+.modal-close:hover { background: rgba(214,69,69,0.1); color: #D64545; transform: rotate(90deg); }
+
+.modal-step-hidden { display: none !important; }
+
+/* -- progress stepper -- */
+.modal-progress {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 30px;
+}
+.progress-dot {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.progress-dot::after {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: #EEF1F6;
+  z-index: 0;
+}
+.progress-dot:last-child::after { display: none; }
+.progress-dot.done::after { background: var(--primary); }
+.progress-dot i {
+  position: relative;
+  z-index: 1;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #EEF1F6;
+  color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; font-style: normal;
+  transition: background var(--transition), color var(--transition);
+}
+.progress-dot em {
+  font-size: 11px; font-weight: 600; color: var(--text-secondary); font-style: normal;
+}
+.progress-dot.active i, .progress-dot.done i { background: var(--primary); color: #fff; }
+.progress-dot.active em, .progress-dot.done em { color: var(--primary); }
+
+.label-optional { font-weight: 400; color: var(--text-secondary); font-size: 11px; }
+
+/* Extension name N/A checkbox */
+.extension-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.extension-field input[type="text"] {
+  flex: 1;
+}
+.na-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.na-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+/* Password strength checker */
+.password-requirements {
+  margin-top: 4px;
+}
+.pw-strength-bar {
+  height: 4px;
+  border-radius: 100px;
+  background: #EEF1F6;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.pw-strength-bar span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: #D64545;
+  border-radius: 100px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+.pw-strength-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 8px;
+}
+.pw-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pw-checklist li {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pw-check {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid #D5DAE3;
+  flex-shrink: 0;
+  position: relative;
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+.pw-checklist li.valid .pw-check {
+  border-color: #1E9E6B;
+  background: #1E9E6B;
+}
+.pw-checklist li.valid .pw-check::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 6px;
+  height: 3px;
+  border-left: 1.5px solid #fff;
+  border-bottom: 1.5px solid #fff;
+  transform: rotate(-45deg);
+}
+.pw-checklist li.valid {
+  color: #1E9E6B;
+}
+
+/* Location search dropdown */
+.location-search-wrap {
+  position: relative;
+}
+.location-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #fff;
+  border: 1px solid rgba(42,42,42,0.08);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(42,42,42,0.1);
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+}
+.location-suggestions.show {
+  display: block;
+}
+.suggestion-item {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-bottom: 1px solid rgba(42,42,42,0.04);
+  transition: background 0.2s ease;
+}
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+.suggestion-item:hover {
+  background: rgba(61,111,224,0.06);
+}
+.suggestion-empty {
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* Warehouse map */
+.warehouse-map {
+  width: 100%;
+  height: 200px;
+  border-radius: 12px;
+  margin-top: 10px;
+  border: 1px solid rgba(42,42,42,0.08);
+  z-index: 1;
+}
+.warehouse-map-hint {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+.warehouse-subtitle { font-size: 13.5px; color: var(--text-secondary); margin-top: 6px; }
+
+.warehouse-list { display: flex; flex-direction: column; gap: 4px; }
+.warehouse-entry {
+  position: relative;
+  padding-bottom: 14px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(42,42,42,0.07);
+}
+.warehouse-entry:last-child { border-bottom: none; }
+.warehouse-remove-btn {
+  position: absolute;
+  top: -6px; right: 0;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary);
+  background: rgba(42,42,42,0.05);
+  transition: background var(--transition), color var(--transition);
+}
+.warehouse-remove-btn:hover { background: rgba(214,69,69,0.1); color: #D64545; }
+
+.modal-plan-summary { text-align: center; margin-bottom: 28px; }
+.modal-eyebrow { display: block; font-size: 12.5px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.modal-plan-name { font-family: var(--font-display); font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.modal-plan-price { font-family: var(--font-display); font-size: 30px; font-weight: 700; color: var(--primary); }
+.modal-plan-price small { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+
+.checkout-form { display: flex; flex-direction: column; gap: 16px; }
+.checkout-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.checkout-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+}
+.checkout-grid .span-2 { grid-column: 1 / -1; }
+.checkout-grid .form-group { gap: 6px; }
+
+.field-with-icon { position: relative; display: flex; align-items: center; }
+.field-with-icon input { flex: 1; padding-right: 44px; }
+.field-with-icon svg { position: absolute; right: 14px; pointer-events: none; }
+
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  cursor: pointer;
+}
+.checkbox-row input {
+  margin-top: 2px;
+  width: 16px; height: 16px;
+  accent-color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.inline-link { color: var(--primary); font-weight: 600; text-decoration: underline; }
+
+.form-error {
+  display: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: #D64545;
+  background: rgba(214,69,69,0.08);
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+.form-error.show { display: block; }
+
+.field-error {
+  display: none;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #D64545;
+  line-height: 1.3;
+}
+.field-error.show {
+  display: block;
+  animation: fade-in-up 0.25s ease;
+}
+.form-group.input-error input,
+.form-group.input-error textarea {
+  border-color: #D64545;
+  box-shadow: 0 0 0 3px rgba(214,69,69,0.08);
+}
+.form-group.input-error .field-with-icon input {
+  border-color: #D64545;
+  box-shadow: 0 0 0 3px rgba(214,69,69,0.08);
+}
+
+.modal-secure-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* -- processing step -- */
+#stepProcessing { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 24px 0 8px; }
+.processing-spinner {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  border: 4px solid rgba(61,111,224,0.15);
+  border-top-color: var(--primary);
+  animation: spin 0.9s linear infinite;
+  margin-bottom: 24px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.processing-title { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.processing-note { font-size: 14px; color: var(--text-secondary); }
+
+/* -- success step -- */
+#stepSuccess { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.success-check {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #34C77B, #1E9E6B);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 18px;
+  box-shadow: 0 10px 24px rgba(30,158,107,0.3);
+  animation: success-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes success-pop {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.welcome-title { font-family: var(--font-display); font-size: 24px; font-weight: 700; margin: 4px 0 10px; }
+.welcome-note { font-size: 14.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px; max-width: 320px; }
+
+.redirect-progress {
+  width: 100%;
+  height: 5px;
+  border-radius: 100px;
+  background: rgba(61,111,224,0.1);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.redirect-progress span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--grad-2), var(--grad-4));
+  border-radius: 100px;
+  transition: width 3s linear;
+}
+
+/* Download modal */
+.download-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+  background: rgba(61,111,224,0.06);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.download-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 100px;
+  background: #EEF1F6;
+  overflow: hidden;
+  margin: 16px 0 8px;
+}
+.download-progress-bar span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--grad-2), var(--grad-4));
+  border-radius: 100px;
+  transition: width 0.3s ease;
+}
+
+@media (max-width: 820px) {
+  .modal-box { max-width: 94vw; }
+}
+
+@media (max-width: 720px) {
+  .modal-box { padding: 48px 28px 28px; }
+  .modal-plan-name { font-size: 19px; }
+  .modal-plan-price { font-size: 26px; }
+  .modal-progress { margin-bottom: 22px; }
+  .progress-dot i { width: 24px; height: 24px; font-size: 11px; }
+  .progress-dot em { font-size: 10px; }
+  .warehouse-map { height: 180px; }
+}
+
+@media (max-width: 640px) {
+  .modal-overlay { padding: 12px; }
+  .modal-box {
+    max-width: 100%;
+    padding: 44px 20px 24px;
+    border-radius: 16px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-close { top: 12px; right: 12px; width: 30px; height: 30px; }
+  .checkout-grid { grid-template-columns: 1fr; }
+  .checkout-form .form-row { grid-template-columns: 1fr; }
+  .progress-dot em { display: none; }
+  .modal-plan-name { font-size: 18px; }
+  .modal-plan-price { font-size: 24px; }
+  .modal-plan-summary { margin-bottom: 20px; }
+  .warehouse-map { height: 160px; }
+  .pw-checklist li { font-size: 11.5px; }
+  .pw-strength-label { font-size: 11px; }
+  .welcome-title { font-size: 20px; }
+  .welcome-note { font-size: 13.5px; max-width: 260px; }
+  .processing-title { font-size: 16px; }
+  .processing-note { font-size: 13px; }
+}
+
+@media (max-height: 600px) and (orientation: landscape) {
+  .modal-overlay { padding: 8px; align-items: flex-start; }
+  .modal-box { padding: 36px 20px 16px; max-height: 96vh; }
+  .modal-progress { margin-bottom: 12px; }
+  .modal-plan-summary { margin-bottom: 12px; }
+  .modal-plan-name { font-size: 16px; }
+  .modal-plan-price { font-size: 20px; }
+  .progress-dot i { width: 20px; height: 20px; font-size: 9px; }
+  .progress-dot::after { top: 10px; }
+  .progress-dot em { display: none; }
+  .warehouse-map { height: 100px; }
+  .checkout-grid { gap: 8px 12px; }
+  .checkout-grid .form-group { gap: 4px; }
+  .checkout-form { gap: 10px; }
+  .modal-close { top: 8px; right: 8px; width: 26px; height: 26px; }
+}
+
+@media (max-width: 420px) {
+  .modal-box { padding: 40px 16px 20px; border-radius: 12px; }
+  .modal-plan-summary { margin-bottom: 16px; }
+  .modal-plan-name { font-size: 16px; }
+  .modal-plan-price { font-size: 21px; }
+  .modal-progress { margin-bottom: 16px; gap: 2px; }
+  .progress-dot i { width: 22px; height: 22px; font-size: 10px; }
+  .progress-dot::after { top: 11px; }
+  .extension-field { flex-direction: column; align-items: stretch; gap: 6px; }
+  .na-checkbox { justify-content: flex-end; }
+  .warehouse-map { height: 140px; }
+  .warehouse-map-hint { font-size: 10.5px; }
+  .warehouse-remove-btn { top: -4px; right: -2px; width: 24px; height: 24px; }
+  .success-check { width: 52px; height: 52px; }
+  .welcome-title { font-size: 18px; }
+  .welcome-note { font-size: 12.5px; max-width: 220px; }
+  .btn-lg { padding: 14px 24px; font-size: 14px; }
 }
