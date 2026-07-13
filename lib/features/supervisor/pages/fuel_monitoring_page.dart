@@ -7,14 +7,14 @@ import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 
-class SupplierFuelMonitoring extends StatefulWidget {
-  const SupplierFuelMonitoring({super.key});
+class SupervisorFuelMonitoring extends StatefulWidget {
+  const SupervisorFuelMonitoring({super.key});
 
   @override
-  State<SupplierFuelMonitoring> createState() => _SupplierFuelMonitoringState();
+  State<SupervisorFuelMonitoring> createState() => _SupervisorFuelMonitoringState();
 }
 
-class _SupplierFuelMonitoringState extends State<SupplierFuelMonitoring> {
+class _SupervisorFuelMonitoringState extends State<SupervisorFuelMonitoring> {
   final _authService = AuthenticationService();
 
   List<FleetTruck> _trucks = [];
@@ -37,19 +37,19 @@ class _SupplierFuelMonitoringState extends State<SupplierFuelMonitoring> {
     final vehicles = results[0] as List<dynamic>;
     final rawStations = results[1] as List<dynamic>;
     final user = results[2] as AuthUser?;
-    final supplierId = user?.supplierId;
+    final supervisorId = user?.supervisorId;
 
     if (mounted) {
       setState(() {
         _trucks = vehicles
             .whereType<Map<String, dynamic>>()
             .map((v) => FleetTruck.fromVehicleJson(v))
-            .where((t) => supplierId == null || t.supplierId == supplierId)
+            .where((t) => supervisorId == null || t.supervisorId == supervisorId)
             .toList();
         _stations = rawStations
             .whereType<Map<String, dynamic>>()
             .map((s) => _FuelStation.fromJson(s))
-            .where((s) => supplierId == null || s.supplierId == supplierId)
+            .where((s) => supervisorId == null || s.supervisorId == supervisorId)
             .toList();
         _isLoading = false;
       });
@@ -302,7 +302,7 @@ class _FuelStation {
   final String type;
   final int capacity;
   final int currentStock;
-  final int supplierId;
+  final int supervisorId;
   final String? address;
 
   const _FuelStation({
@@ -311,7 +311,7 @@ class _FuelStation {
     required this.type,
     required this.capacity,
     required this.currentStock,
-    required this.supplierId,
+    required this.supervisorId,
     this.address,
   });
 
@@ -322,7 +322,7 @@ class _FuelStation {
       type: json['type'] as String? ?? '',
       capacity: (json['capacity'] as num?)?.toInt() ?? 0,
       currentStock: (json['currentStock'] as num?)?.toInt() ?? 0,
-      supplierId: json['supplierId'] as int? ?? 0,
+      supervisorId: json['supervisorId'] as int? ?? 0,
       address: json['address'] as String?,
     );
   }

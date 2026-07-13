@@ -36,7 +36,7 @@ class ManagedUser {
     required this.email,
     required this.password,
     this.plateNumber,
-    this.assignedSupplierId,
+    this.assignedSupervisorId,
     this.location,
   });
 
@@ -50,7 +50,7 @@ class ManagedUser {
   final String email;
   final String password;
   final String? plateNumber;
-  final String? assignedSupplierId; // Driver only — userId of the supplier
+  final String? assignedSupervisorId; // Driver only — userId of the supervisor
   final String? location; // Manager only
 
   String get fullName {
@@ -75,7 +75,7 @@ class ManagedUser {
       email: json['email'] as String? ?? '',
       password: json['password'] as String? ?? '',
       plateNumber: json['plateNumber'] as String?,
-      assignedSupplierId: (json['assignedSupplierId'] ?? json['supplierId'])?.toString(),
+      assignedSupervisorId: (json['assignedSupervisorId'] ?? json['supervisorId'])?.toString(),
       location: _coerceStringValue(json['location']),
     );
   }
@@ -91,7 +91,7 @@ class ManagedUser {
     String? email,
     String? password,
     String? plateNumber,
-    String? assignedSupplierId,
+    String? assignedSupervisorId,
     String? location,
   }) {
     return ManagedUser(
@@ -105,28 +105,28 @@ class ManagedUser {
       email: email ?? this.email,
       password: password ?? this.password,
       plateNumber: plateNumber ?? this.plateNumber,
-      assignedSupplierId: assignedSupplierId ?? this.assignedSupplierId,
+      assignedSupervisorId: assignedSupervisorId ?? this.assignedSupervisorId,
       location: location ?? this.location,
     );
   }
 }
 
-List<ManagedUser> filterUsersForCurrentSupplier(
+List<ManagedUser> filterUsersForCurrentSupervisor(
   List<ManagedUser> users, {
-  required String? currentSupplierId,
+  required String? currentSupervisorId,
   required String? currentRole,
 }) {
-  if (currentRole?.toLowerCase() != 'supplier' ||
-      currentSupplierId == null ||
-      currentSupplierId.trim().isEmpty) {
+  if (currentRole?.toLowerCase() != 'supervisor' ||
+      currentSupervisorId == null ||
+      currentSupervisorId.trim().isEmpty) {
     return users;
   }
 
-  final supplierId = currentSupplierId.trim();
+  final supervisorId = currentSupervisorId.trim();
   return users.where((user) {
-    final isAssignedToSupplier = user.assignedSupplierId?.trim() == supplierId;
-    final isCurrentSupplierAccount = user.userId.trim() == supplierId;
-    return isAssignedToSupplier && !isCurrentSupplierAccount;
+    final isAssignedToSupervisor = user.assignedSupervisorId?.trim() == supervisorId;
+    final isCurrentSupervisorAccount = user.userId.trim() == supervisorId;
+    return isAssignedToSupervisor && !isCurrentSupervisorAccount;
   }).toList();
 }
 
@@ -145,7 +145,7 @@ class _UserDashboardState extends State<UserDashboard> {
     'All',
     'Manager',
     'Driver',
-    'Supplier',
+    'Supervisor',
   ];
 
   List<ManagedUser> _users = [];
@@ -181,9 +181,9 @@ class _UserDashboardState extends State<UserDashboard> {
           .map(ManagedUser.fromJson)
           .toList();
       final currentUser = await AuthenticationService().getSavedUser();
-      final visibleUsers = filterUsersForCurrentSupplier(
+      final visibleUsers = filterUsersForCurrentSupervisor(
         users,
-        currentSupplierId: currentUser?.userId.toString(),
+        currentSupervisorId: currentUser?.userId.toString(),
         currentRole: currentUser?.role,
       );
 
@@ -244,25 +244,25 @@ class _UserDashboardState extends State<UserDashboard> {
   int _countByRole(String role) => _users.where((u) => u.role == role).length;
 
   void _openAddDialog() {
-    final suppliers = _users.where((u) => u.role == 'Supplier').toList();
+    final supervisors = _users.where((u) => u.role == 'Supervisor').toList();
     showDialog(
       context: context,
       builder: (_) => _UserFormDialog(
-        suppliers: suppliers,
+        supervisors: supervisors,
         onSubmit: _addUser,
       ),
     );
   }
 
   void _openEditDialog(ManagedUser user) {
-    final suppliers = _users
-        .where((u) => u.role == 'Supplier' && u.userId != user.userId)
+    final supervisors = _users
+        .where((u) => u.role == 'Supervisor' && u.userId != user.userId)
         .toList();
     showDialog(
       context: context,
       builder: (_) => _UserFormDialog(
         existingUser: user,
-        suppliers: suppliers,
+        supervisors: supervisors,
         onSubmit: _updateUser,
       ),
     );
@@ -384,8 +384,8 @@ class _UserDashboardState extends State<UserDashboard> {
         const SizedBox(width: FleetSpacing.md),
         Expanded(
           child: _AnalyticsCard(
-            label: 'Suppliers',
-            value: _countByRole('Supplier').toString(),
+            label: 'Supervisors',
+            value: _countByRole('Supervisor').toString(),
             icon: Icons.inventory_2_outlined,
             accentColor: AppTheme.brandBlueDark,
           ),
@@ -408,8 +408,8 @@ class _UserDashboardState extends State<UserDashboard> {
     final scheme = Theme.of(context).colorScheme;
     final managers = _countByRole('Manager').toDouble();
     final drivers = _countByRole('Driver').toDouble();
-    final suppliers = _countByRole('Supplier').toDouble();
-    final total = managers + drivers + suppliers;
+    final supervisors = _countByRole('Supervisor').toDouble();
+    final total = managers + drivers + supervisors;
 
     final companyData = _usersByCompany();
 
@@ -436,10 +436,10 @@ class _UserDashboardState extends State<UserDashboard> {
                         label: 'Drivers',
                         color: AppTheme.warningAmber,
                       ),
-                    if (suppliers > 0)
+                    if (supervisors > 0)
                       PieSection(
-                        value: suppliers,
-                        label: 'Suppliers',
+                        value: supervisors,
+                        label: 'Supervisors',
                         color: AppTheme.brandBlueDark,
                       ),
                   ],
@@ -731,12 +731,12 @@ class _AnalyticsCard extends StatelessWidget {
 class _UserFormDialog extends StatefulWidget {
   const _UserFormDialog({
     this.existingUser,
-    required this.suppliers,
+    required this.supervisors,
     required this.onSubmit,
   });
 
   final ManagedUser? existingUser;
-  final List<ManagedUser> suppliers;
+  final List<ManagedUser> supervisors;
   final void Function(ManagedUser user) onSubmit;
 
   @override
@@ -756,9 +756,9 @@ class _UserFormDialogState extends State<_UserFormDialog> {
   late final TextEditingController _plateNumberCtrl;
   late final TextEditingController _locationCtrl;
 
-  static const _roles = ['Manager', 'Driver', 'Supplier'];
+  static const _roles = ['Manager', 'Driver', 'Supervisor'];
   late String _selectedRole;
-  String? _selectedSupplierId;
+  String? _selectedSupervisorId;
   bool _obscurePassword = true;
 
   bool get _isEditing => widget.existingUser != null;
@@ -779,7 +779,7 @@ class _UserFormDialogState extends State<_UserFormDialog> {
     // Fall back to the first available role if the existing user's role
     // is no longer selectable (e.g. an old "Admin" record).
     _selectedRole = _roles.contains(u?.role) ? u!.role : _roles.first;
-    _selectedSupplierId = u?.assignedSupplierId;
+    _selectedSupervisorId = u?.assignedSupervisorId;
   }
 
   @override
@@ -813,8 +813,8 @@ class _UserFormDialogState extends State<_UserFormDialog> {
           : (widget.existingUser?.password ?? ''),
       plateNumber:
           _selectedRole == 'Driver' ? _plateNumberCtrl.text.trim() : null,
-      assignedSupplierId:
-          _selectedRole == 'Driver' ? _selectedSupplierId : null,
+      assignedSupervisorId:
+          _selectedRole == 'Driver' ? _selectedSupervisorId : null,
       location: _selectedRole == 'Manager' ? _locationCtrl.text.trim() : null,
     );
 
@@ -950,7 +950,7 @@ class _UserFormDialogState extends State<_UserFormDialog> {
                         setState(() {
                           _selectedRole = value;
                           // Clear role-specific fields when switching away
-                          if (value != 'Driver') _selectedSupplierId = null;
+                          if (value != 'Driver') _selectedSupervisorId = null;
                           if (value != 'Manager') _locationCtrl.clear();
                         });
                       }
@@ -1010,11 +1010,11 @@ class _UserFormDialogState extends State<_UserFormDialog> {
                     ),
                     const SizedBox(height: FleetSpacing.md),
                     DropdownButtonFormField<String>(
-                      initialValue: _selectedSupplierId,
+                      initialValue: _selectedSupervisorId,
                       decoration: const InputDecoration(
-                        labelText: 'Assigned Supplier',
+                        labelText: 'Assigned Supervisor',
                       ),
-                      items: widget.suppliers
+                      items: widget.supervisors
                           .map(
                             (s) => DropdownMenuItem(
                               value: s.userId,
@@ -1023,16 +1023,16 @@ class _UserFormDialogState extends State<_UserFormDialog> {
                           )
                           .toList(),
                       onChanged: (value) =>
-                          setState(() => _selectedSupplierId = value),
+                          setState(() => _selectedSupervisorId = value),
                       validator: (value) {
-                        if (widget.suppliers.isEmpty) return null;
+                        if (widget.supervisors.isEmpty) return null;
                         return value == null
-                            ? 'Please select a supplier'
+                            ? 'Please select a supervisor'
                             : null;
                       },
-                      hint: widget.suppliers.isEmpty
-                          ? const Text('No suppliers available yet')
-                          : const Text('Select a supplier'),
+                      hint: widget.supervisors.isEmpty
+                          ? const Text('No supervisors available yet')
+                          : const Text('Select a supervisor'),
                     ),
                   ],
                   if (_selectedRole == 'Manager') ...[

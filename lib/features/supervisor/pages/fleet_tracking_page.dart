@@ -14,14 +14,14 @@ import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:project_fuel/shared/widgets/action_button.dart';
 import 'package:project_fuel/shared/widgets/role_badge.dart';
 
-class SupplierFleetTracking extends StatefulWidget {
-  const SupplierFleetTracking({super.key});
+class SupervisorFleetTracking extends StatefulWidget {
+  const SupervisorFleetTracking({super.key});
 
   @override
-  State<SupplierFleetTracking> createState() => _SupplierFleetTrackingState();
+  State<SupervisorFleetTracking> createState() => _SupervisorFleetTrackingState();
 }
 
-class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
+class _SupervisorFleetTrackingState extends State<SupervisorFleetTracking> {
   final _mapController = MapController();
   final _authService = AuthenticationService();
   final _deliveryService = DeliveryService();
@@ -71,19 +71,19 @@ class _SupplierFleetTrackingState extends State<SupplierFleetTracking> {
     final stations = results[1] as List<dynamic>;
     final users = results[2] as List<dynamic>;
     final user = results[3] as AuthUser?;
-    final supplierId = user?.supplierId;
+    final supervisorId = user?.supervisorId;
 
     if (mounted) {
       setState(() {
         _trucks = vehicles
             .whereType<Map<String, dynamic>>()
             .map((v) => FleetTruck.fromVehicleJson(v))
-            .where((t) => supplierId == null || t.supplierId == supplierId)
+            .where((t) => supervisorId == null || t.supervisorId == supervisorId)
             .toList();
         _stations = stations
             .whereType<Map<String, dynamic>>()
             .map((s) => FleetStation.fromJson(s))
-            .where((s) => supplierId == null || s.supplierId == supplierId)
+            .where((s) => supervisorId == null || s.supervisorId == supervisorId)
             .toList();
         _authUsers = users.cast<Map<String, dynamic>>();
         _userPosition = (user?.latitude != null && user?.longitude != null)

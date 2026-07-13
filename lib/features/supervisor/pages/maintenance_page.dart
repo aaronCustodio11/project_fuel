@@ -6,14 +6,14 @@ import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/services/maintenance_service.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 
-class SupplierMaintenance extends StatefulWidget {
-  const SupplierMaintenance({super.key});
+class SupervisorMaintenance extends StatefulWidget {
+  const SupervisorMaintenance({super.key});
 
   @override
-  State<SupplierMaintenance> createState() => _SupplierMaintenanceState();
+  State<SupervisorMaintenance> createState() => _SupervisorMaintenanceState();
 }
 
-class _SupplierMaintenanceState extends State<SupplierMaintenance> {
+class _SupervisorMaintenanceState extends State<SupervisorMaintenance> {
   List<MaintenanceRecord> _records = [];
   final Map<int, String> _userNames = {};
   bool _isLoading = true;
@@ -239,7 +239,7 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
           ...record.notes,
           MaintenanceNote(
             id: 'N-${now.millisecondsSinceEpoch}',
-            author: 'Supplier',
+            author: 'Supervisor',
             note: 'Request approved and scheduled.',
             timestamp: now,
           ),
@@ -253,7 +253,7 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
           ...record.notes,
           MaintenanceNote(
             id: 'N-${now.millisecondsSinceEpoch}',
-            author: 'Supplier',
+            author: 'Supervisor',
             note: 'Request rejected: ${result['reason'] as String}',
             timestamp: now,
           ),
@@ -336,7 +336,7 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
           ? record.notes
           : [...record.notes, MaintenanceNote(
               id: 'N-${now.millisecondsSinceEpoch}',
-              author: 'Supplier',
+              author: 'Supervisor',
               note: note,
               timestamp: now,
             )],
@@ -434,7 +434,7 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
         ...record.notes,
         MaintenanceNote(
           id: 'N-${now.millisecondsSinceEpoch}',
-          author: 'Supplier',
+          author: 'Supervisor',
           note: result['note'] as String? ?? 'Maintenance completed.',
           timestamp: now,
         ),
@@ -514,7 +514,7 @@ class _SupplierMaintenanceState extends State<SupplierMaintenance> {
         ...record.notes,
         MaintenanceNote(
           id: 'N-${now.millisecondsSinceEpoch}',
-          author: 'Supplier',
+          author: 'Supervisor',
           note: note,
           timestamp: now,
         ),
