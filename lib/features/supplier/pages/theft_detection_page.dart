@@ -38,14 +38,14 @@ class TheftAlert {
   });
 }
 
-class SupervisorTheftDetection extends StatefulWidget {
-  const SupervisorTheftDetection({super.key});
+class SupplierTheftDetection extends StatefulWidget {
+  const SupplierTheftDetection({super.key});
 
   @override
-  State<SupervisorTheftDetection> createState() => _SupervisorTheftDetectionState();
+  State<SupplierTheftDetection> createState() => _SupplierTheftDetectionState();
 }
 
-class _SupervisorTheftDetectionState extends State<SupervisorTheftDetection> {
+class _SupplierTheftDetectionState extends State<SupplierTheftDetection> {
   List<TheftAlert> _alerts = [];
   bool _isLoading = true;
 

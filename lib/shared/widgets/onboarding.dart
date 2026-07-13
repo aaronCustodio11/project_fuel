@@ -2,27 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-enum OnboardingRole { supervisor, manager, driver }
+enum OnboardingRole { supplier, manager, driver }
 
 Future<void> showOnboardingOverlay(
   BuildContext context, {
   required OnboardingRole role,
-}) async {
-  final prefs = await SharedPreferences.getInstance();
-  final key = 'onboarding_shown_${role.name}';
-  if (prefs.getBool(key) == true) return;
-
-  // ignore: use_build_context_synchronously
-  await showDialog<void>(
+}) {
+  return showDialog<void>(
     context: context,
     barrierDismissible: false,
     barrierColor: Colors.black54,
     builder: (_) => _OnboardingOverlay(role: role),
   );
-
-  await prefs.setBool(key, true);
 }
 
 class _OnboardingOverlay extends StatefulWidget {
@@ -73,13 +65,13 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
 
   List<_OnboardingPageData> _pagesForRole(OnboardingRole role) {
     return switch (role) {
-      OnboardingRole.supervisor => _supervisorPages,
+      OnboardingRole.supplier => _supplierPages,
       OnboardingRole.manager => _managerPages,
       OnboardingRole.driver => _driverPages,
     };
   }
 
-  static const _supervisorPages = [
+  static const _supplierPages = [
     _OnboardingPageData(
       icon: Icons.local_gas_station_rounded,
       title: 'Welcome to FleetSense',
@@ -96,7 +88,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Get a complete overview of your supply operations. View key '
           'metrics, active deliveries, and system alerts at a glance.',
       imagePath:
-          'assets/images/Onboarding/supervisor/IntroDashboardSupervisor.jpg',
+          'assets/images/Onboarding/supplier/IntroDashboardSupplier.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.people_outline,
@@ -105,7 +97,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Manage all users across your supply network. Assign roles, '
           'track activity, and control access permissions.',
       imagePath:
-          'assets/images/Onboarding/supervisor/IntroUserDashboardSupervisor.jpg',
+          'assets/images/Onboarding/supplier/IntroUserDashboardSupplier.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.local_gas_station_outlined,
@@ -115,7 +107,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Track inventory, detect low-stock conditions, and manage '
           'fuel distribution efficiently.',
       imagePath:
-          'assets/images/Onboarding/supervisor/IntroFuelMonitoringSupervisor.jpg',
+          'assets/images/Onboarding/supplier/IntroFuelMonitoringSupplier.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.build_outlined,
@@ -124,7 +116,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Schedule and track maintenance for your entire fleet. Get '
           'service reminders and maintain detailed repair histories.',
       imagePath:
-          'assets/images/Onboarding/supervisor/IntroMaintenanceSupervisor.jpg',
+          'assets/images/Onboarding/supplier/IntroMaintenanceSupplier.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.map_outlined,
@@ -133,7 +125,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Monitor your tanker trucks in real time with live GPS tracking. '
           'View routes, ETAs, and optimize delivery schedules.',
       imagePath:
-          'assets/images/Onboarding/supervisor/IntroFleetTrackingSupervisor.jpg',
+          'assets/images/Onboarding/supplier/IntroFleetTrackingSupplier.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.security_outlined,
@@ -142,7 +134,7 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'Protect your fuel assets with intelligent monitoring. Detect '
           'unauthorized access and unusual activity instantly.',
       imagePath:
-          'assets/images/Onboarding/supervisor/IntroTheftDetectionSupervisor.jpg',
+          'assets/images/Onboarding/supplier/IntroTheftDetectionSupplier.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.settings_outlined,
@@ -187,15 +179,6 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
           'View routes, ETAs, and optimize station deliveries.',
       imagePath:
           'assets/images/Onboarding/manager/IntroFleetTrackingManager.jpg',
-    ),
-    _OnboardingPageData(
-      icon: Icons.build_outlined,
-      title: 'Maintenance',
-      description:
-          'Schedule and track maintenance for your entire fleet. Get '
-          'service reminders and maintain detailed repair histories.',
-      imagePath:
-          'assets/images/Onboarding/driver/IntroMaintenanceDriver.jpg',
     ),
     _OnboardingPageData(
       icon: Icons.security_outlined,
@@ -444,12 +427,6 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
     );
   }
 
-  Widget _onboardingImage(String path) {
-    return path.endsWith('.svg')
-        ? SvgPicture.asset(path, fit: BoxFit.contain, alignment: Alignment.center)
-        : Image.asset(path, fit: BoxFit.contain, alignment: Alignment.center);
-  }
-
   Widget _buildDriverPage(ThemeData theme, _OnboardingPageData data, bool isMobile) {
     final iconSize = isMobile ? 32.0 : 40.0;
     final titleSize = isMobile ? 20.0 : 22.0;
@@ -463,7 +440,11 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
             flex: 6,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(FleetRadius.md),
-              child: _onboardingImage(data.imagePath!),
+              child: SvgPicture.asset(
+                data.imagePath!,
+                fit: BoxFit.contain,
+                alignment: Alignment.center,
+              ),
             ),
           ),
           SizedBox(height: isMobile ? 16 : 20),
@@ -537,7 +518,11 @@ class _OnboardingOverlayState extends State<_OnboardingOverlay> {
 
     final imageSide = ClipRRect(
       borderRadius: BorderRadius.circular(FleetRadius.md),
-      child: _onboardingImage(data.imagePath!),
+      child: SvgPicture.asset(
+        data.imagePath!,
+        fit: BoxFit.contain,
+        alignment: Alignment.center,
+      ),
     );
 
     return Padding(

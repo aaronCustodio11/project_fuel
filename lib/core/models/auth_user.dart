@@ -6,7 +6,7 @@ class AuthUser {
     required this.email,
     required this.role,
     required this.company,
-    this.supervisorId,
+    this.supplierId,
     this.latitude,
     this.longitude,
   });
@@ -17,7 +17,7 @@ class AuthUser {
   final String email;
   final String role;
   final String company;
-  final int? supervisorId;
+  final int? supplierId;
   final double? latitude;
   final double? longitude;
 

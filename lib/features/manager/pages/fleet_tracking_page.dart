@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:chartify/chartify.dart';
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -6,10 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:project_fuel/core/models/fleet_tracking.dart';
 import 'package:project_fuel/core/services/authentication.dart';
-import 'package:project_fuel/core/services/deliveries.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
-import 'package:project_fuel/core/services/navigation_simulator.dart';
-import 'package:project_fuel/core/services/osrm_routing.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:project_fuel/shared/widgets/action_button.dart';
 
@@ -23,8 +19,6 @@ class ManagerFleetTracking extends StatefulWidget {
 class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
   final _mapController = MapController();
   final _authService = AuthenticationService();
-  final _deliveryService = DeliveryService();
-  final _routingService = OSRMRoutingService();
 
   Object? _selectedItem;
 
@@ -33,27 +27,11 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
   bool _isLoading = true;
   LatLng? _userPosition;
   bool _followUser = true;
-  FleetTruck? _trackingTruck;
-  List<_DeliveryStop> _trackedStops = [];
-  List<LatLng>? _routePoints;
-  bool _isLoadingRoute = false;
-
-  final Map<String, NavigationSimulator> _simulators = {};
-  final Map<String, LatLng> _livePositions = {};
 
   @override
   void initState() {
     super.initState();
     _loadData();
-  }
-
-  @override
-  void dispose() {
-    for (final s in _simulators.values) {
-      s.dispose();
-    }
-    _simulators.clear();
-    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -67,7 +45,7 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
     final vehicles = results[0] as List<dynamic>;
     final stations = results[1] as List<dynamic>;
     final user = results[3] as AuthUser?;
-    final supervisorId = user?.supervisorId;
+    final supplierId = user?.supplierId;
     final managerId = user?.userId;
 
     if (mounted) {
@@ -75,7 +53,7 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
         _trucks = vehicles
             .whereType<Map<String, dynamic>>()
             .map((v) => FleetTruck.fromVehicleJson(v))
-            .where((t) => supervisorId == null || t.supervisorId == supervisorId)
+            .where((t) => supplierId == null || t.supplierId == supplierId)
             .toList();
         _stations = stations
             .whereType<Map<String, dynamic>>()
@@ -87,7 +65,6 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
             : null;
         _isLoading = false;
       });
-      _startSimulations();
       WidgetsBinding.instance.addPostFrameCallback((_) => _fitMapToMarkers());
     }
   }
@@ -120,156 +97,6 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
         padding: const EdgeInsets.all(40),
       ),
     );
-  }
-
-  void _trackTruck(FleetTruck truck) {
-    _mapController.move(truck.position, 16);
-    setState(() {
-      _trackingTruck = truck;
-      _selectedItem = truck;
-      _followUser = false;
-      _trackedStops = [];
-      _routePoints = null;
-    });
-    _fetchRouteForTruck(truck);
-  }
-
-  Future<void> _fetchRouteForTruck(FleetTruck truck) async {
-    final deliveries = await _deliveryService.getAllDeliveries();
-    final truckDeliveries = deliveries.where((d) => d.truckId == truck.id).toList();
-
-    if (truckDeliveries.isEmpty) return;
-
-    final stops = <LatLng>[];
-    final stopNames = <LatLng, _DeliveryStop>{};
-
-    for (final d in truckDeliveries) {
-      final pos = LatLng(d.stationLat, d.stationLng);
-      stops.add(pos);
-      stopNames[pos] = _DeliveryStop(
-        position: pos,
-        name: d.stationName,
-        product: d.product,
-        quantity: d.quantity,
-        unit: d.unit,
-      );
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _trackedStops = stopNames.values.toList();
-      _isLoadingRoute = true;
-    });
-
-    final waypoints = [truck.position, ...stops];
-    final result = await _routingService.getRoute(waypoints: waypoints);
-
-    if (!mounted) return;
-
-    if (result != null) {
-      double totalKm = 0;
-      for (var i = 0; i < result.polyline.length - 1; i++) {
-        totalKm += _calculateDistanceKm(result.polyline[i], result.polyline[i + 1]);
-      }
-
-      setState(() {
-        _routePoints = result.polyline;
-        _isLoadingRoute = false;
-      });
-
-      _showRouteLoadedNotification(truck, totalKm);
-    } else {
-      setState(() => _isLoadingRoute = false);
-    }
-  }
-
-  double _calculateDistanceKm(LatLng a, LatLng b) {
-    const earthRadius = 6371.0;
-    final lat1 = a.latitude * (math.pi / 180);
-    final lat2 = b.latitude * (math.pi / 180);
-    final deltaLat = (b.latitude - a.latitude) * (math.pi / 180);
-    final deltaLng = (b.longitude - a.longitude) * (math.pi / 180);
-    final x = math.sin(deltaLat / 2) * math.sin(deltaLat / 2) +
-        math.cos(lat1) * math.cos(lat2) * math.sin(deltaLng / 2) * math.sin(deltaLng / 2);
-    return earthRadius * 2 * math.asin(math.sqrt(x));
-  }
-
-  void _showRouteLoadedNotification(FleetTruck truck, double totalKm) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Route loaded for ${truck.name} — ${totalKm.toStringAsFixed(1)} km'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
-  void _clearTracking() {
-    if (_userPosition != null) {
-      _mapController.move(_userPosition!, 15);
-    }
-    setState(() {
-      _trackingTruck = null;
-      _selectedItem = null;
-      _trackedStops = [];
-      _routePoints = null;
-      _followUser = true;
-    });
-  }
-
-  Future<void> _startSimulations() async {
-    final enRouteTrucks = _trucks.where((t) => t.status == TruckStatus.moving).toList();
-    if (enRouteTrucks.isEmpty) return;
-
-    final deliveries = await _deliveryService.getAllDeliveries();
-
-    for (final truck in enRouteTrucks) {
-      final truckDeliveries = deliveries.where((d) => d.truckId == truck.id).toList();
-      if (truckDeliveries.isEmpty) continue;
-
-      truckDeliveries.sort((a, b) {
-        const order = {'inProgress': 0, 'scheduled': 1, 'completed': 2};
-        return (order[a.status] ?? 3).compareTo(order[b.status] ?? 3);
-      });
-
-      final stops = <NavigationStop>[];
-      for (final d in truckDeliveries) {
-        if (d.status == 'completed') continue;
-        stops.add(NavigationStop(
-          id: d.id,
-          name: d.stationName,
-          position: LatLng(d.stationLat, d.stationLng),
-        ));
-      }
-      if (stops.isEmpty) continue;
-
-      final waypoints = [truck.position, ...stops.map((s) => s.position)];
-      final result = await _routingService.getRoute(waypoints: waypoints);
-      if (!mounted) return;
-      if (result == null) continue;
-
-      final speed = (truck.speed != null && truck.speed! > 0) ? truck.speed! : 40.0;
-
-      final simulator = NavigationSimulator(
-        route: result.polyline,
-        stops: stops,
-        speedKph: speed,
-        tickMs: 2000,
-        arrivalThresholdKm: 0.1,
-      );
-
-      simulator.state.addListener(() {
-        if (!mounted) return;
-        final navState = simulator.state.value;
-        setState(() {
-          _livePositions[truck.id] = navState.currentPosition;
-        });
-      });
-
-      _simulators[truck.id] = simulator;
-      simulator.start();
-    }
   }
 
   void _onMapEvent(MapEvent event) {
@@ -402,12 +229,11 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
   }
 
   Marker _buildTruckMarker(FleetTruck truck) {
-    final pos = _livePositions[truck.id] ?? truck.position;
     final color = _truckStatusColor(truck.status);
     final selected = _selectedItem == truck;
     final size = selected ? 56.0 : 48.0;
     return Marker(
-      point: pos,
+      point: truck.position,
       width: size + 8,
       height: size + 8,
       child: AnimatedContainer(
@@ -450,28 +276,10 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
     );
   }
 
-  Marker _buildStopMarker(_DeliveryStop stop) {
-    return Marker(
-      point: stop.position,
-      width: 46,
-      height: 46,
-      child: RoleBadge(
-        icon: Icons.local_gas_station_rounded,
-        color: AppTheme.accentBlue,
-        size: 44,
-      ),
-    );
-  }
-
   void _onItemTap(Object item) {
-    if (item is FleetTruck) {
-      _trackTruck(item);
-    } else {
-      setState(() {
-        _selectedItem = _selectedItem == item ? null : item;
-        _trackingTruck = null;
-      });
-    }
+    setState(() {
+      _selectedItem = _selectedItem == item ? null : item;
+    });
   }
 
   Widget _buildMap() {
@@ -489,8 +297,12 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
               ),
               onMapEvent: _onMapEvent,
             ),
-            children: (() {
-              var mapMarkers = <Marker>[
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.example.project_fuel',
+              ),
+              MarkerLayer(markers: [
                 if (_userPosition != null)
                   Marker(
                     point: _userPosition!,
@@ -512,60 +324,10 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
                       child: const Icon(Icons.person, color: Colors.white, size: 20),
                     ),
                   ),
-                if (_trackingTruck != null) ...[
-                  _buildTruckMarker(_trackingTruck!),
-                  for (final stop in _trackedStops)
-                    _buildStopMarker(stop),
-                ] else ...[
-                  ..._trucks.map(_buildTruckMarker),
-                  ..._stations.map(_buildStationMarker),
-                ],
-              ];
-
-              final routeScheme = Theme.of(context).colorScheme;
-              final routePolylines = <Polyline>[];
-              if (_routePoints != null && _routePoints!.length >= 2) {
-                final trackedSim = _trackingTruck != null ? _simulators[_trackingTruck!.id] : null;
-                final traveled = trackedSim?.state.value.routeIndex ?? 0;
-                if (traveled > 0 && traveled < _routePoints!.length) {
-                  routePolylines.add(
-                    Polyline(
-                      points: _routePoints!.sublist(0, traveled),
-                      color: routeScheme.outline.withValues(alpha: 0.3),
-                      strokeWidth: 4,
-                    ),
-                  );
-                  routePolylines.add(
-                    Polyline(
-                      points: _routePoints!.sublist(traveled),
-                      color: routeScheme.secondary,
-                      strokeWidth: 5,
-                      borderColor: Colors.white,
-                      borderStrokeWidth: 2,
-                    ),
-                  );
-                } else {
-                  routePolylines.add(
-                    Polyline(
-                      points: _routePoints!,
-                      color: routeScheme.secondary,
-                      strokeWidth: 5,
-                      borderColor: Colors.white,
-                      borderStrokeWidth: 2,
-                    ),
-                  );
-                }
-              }
-
-              return <Widget>[
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.project_fuel',
-                ),
-                MarkerLayer(rotate: true, markers: mapMarkers),
-                PolylineLayer(polylines: routePolylines),
-              ];
-            })(),
+                ..._trucks.map(_buildTruckMarker),
+                ..._stations.map(_buildStationMarker),
+              ]),
+            ],
           ),
         ),
         if (_userPosition != null)
@@ -592,121 +354,14 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
   }
 
   Widget _buildSidePanel() {
-    if (_trackingTruck != null && _trackedStops.isNotEmpty) {
-      final truck = _trackingTruck!;
-      final totalKm = _routePoints != null
-          ? (() {
-              double km = 0;
-              for (var i = 0; i < _routePoints!.length - 1; i++) {
-                km += _calculateDistanceKm(_routePoints![i], _routePoints![i + 1]);
-              }
-              return km;
-            })()
-          : 0.0;
-      return Container(
-        padding: const EdgeInsets.all(FleetSpacing.lg),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(FleetRadius.md),
-          border: Border.all(color: Theme.of(context).colorScheme.outline),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Tracking', style: Theme.of(context).textTheme.titleMedium),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 18),
-                  onPressed: _clearTracking,
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
-            ),
-            const SizedBox(height: FleetSpacing.md),
-            Row(
-              children: [
-                RoleBadge(
-                  icon: Icons.local_shipping_rounded,
-                  color: _truckStatusColor(truck.status),
-                  size: 40,
-                ),
-                const SizedBox(width: FleetSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(truck.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      )),
-                      Text(truck.plateNumber, style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      )),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: FleetSpacing.md),
-            if (_isLoadingRoute)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: FleetSpacing.md),
-                child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
-              )
-            else ...[
-              _detailRow(Icons.route, 'Est. Distance', '${totalKm.toStringAsFixed(1)} km'),
-              const SizedBox(height: FleetSpacing.sm),
-              _detailRow(Icons.location_on, 'Stops', '${_trackedStops.length}'),
-              const SizedBox(height: FleetSpacing.md),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _clearTracking,
-                  icon: const Icon(Icons.clear, size: 16),
-                  label: const Text('Clear Tracking'),
-                ),
-              ),
-            ],
-          ],
-        ),
-      );
-    }
-
-    if (_selectedItem != null) {
-      return _DetailPanel(
-        item: _selectedItem,
-        truckStatusColor: _truckStatusColor,
-        onNotifyDriver: _showNotifyTruckSheet,
-        onDismiss: () {
-          if (_trackingTruck != null) {
-            _clearTracking();
-          } else {
-            setState(() => _selectedItem = null);
-          }
-        },
-      );
-    }
-
-    return _StationList(stations: _stations);
-  }
-
-  Widget _detailRow(IconData icon, String label, String value) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Icon(icon, size: 14, color: theme.colorScheme.onSurfaceVariant),
-        const SizedBox(width: FleetSpacing.sm),
-        Text('$label: ', style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        )),
-        Expanded(
-          child: Text(value, style: theme.textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          )),
-        ),
-      ],
-    );
+    return _selectedItem != null
+        ? _DetailPanel(
+            item: _selectedItem,
+            truckStatusColor: _truckStatusColor,
+            onNotifyDriver: _showNotifyTruckSheet,
+            onDismiss: () => setState(() => _selectedItem = null),
+          )
+        : _StationList(stations: _stations);
   }
 
   void _showNotifyTruckSheet({FleetTruck? truck}) {
@@ -943,22 +598,6 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
       ),
     );
   }
-}
-
-class _DeliveryStop {
-  final LatLng position;
-  final String name;
-  final String product;
-  final int quantity;
-  final String unit;
-
-  const _DeliveryStop({
-    required this.position,
-    required this.name,
-    required this.product,
-    required this.quantity,
-    required this.unit,
-  });
 }
 
 class _KpiCard extends StatelessWidget {

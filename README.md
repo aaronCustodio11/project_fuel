@@ -1,6 +1,6 @@
 # FleetSense
 
-A Flutter prototype for fuel delivery operations, connecting tanker truck drivers, gas station managers, and fuel supervisors. Uses local JSON files for mock data with Batangas-area locations.
+A Flutter prototype for fuel delivery operations, connecting tanker truck drivers, gas station managers, and fuel suppliers. Uses local JSON files for mock data with Batangas-area locations.
 
 ---
 
@@ -24,7 +24,7 @@ lib/
 │   │   ├── deliveries.dart            # DeliveryService (3-way join)
 │   │   ├── json_reader.dart           # Reads mock JSON assets
 │   │   ├── maintenance_service.dart   # Maintenance record queries
-│   │   ├── navigation_simulator.dart  # Reusable ValueNotifier-based truck movement simulation (driver + supervisor fleet)
+│   │   ├── navigation_simulator.dart  # Reusable ValueNotifier-based truck movement simulation (driver + supplier fleet)
 │   │   └── osrm_routing.dart          # OSRM API client
 │   └── theme/
 │       └── app_theme.dart             # Light/dark Material 3, ThemeProvider
@@ -50,15 +50,15 @@ lib/
 │   ├── profile/
 │   │   └── pages/
 │   │       └── profile_page.dart      # Account, appearance, logout
-│   └── supervisor/
-│       ├── supervisor_screen.dart       # Shell with sidebar + IndexedStack
+│   └── supplier/
+│       ├── supplier_screen.dart       # Shell with sidebar + IndexedStack
 │       ├── pages/
 │       │   ├── dashboard_page.dart
 │       │   ├── fleet_tracking_page.dart
 │       │   ├── maintenance_page.dart
 │       │   ├── theft_detection_page.dart
 │       │   └── user_dashboard_page.dart
-│       └── widgets/                   # Supervisor-specific components
+│       └── widgets/                   # Supplier-specific components
 │
 └── shared/
     └── widgets/
@@ -70,9 +70,9 @@ lib/
 
 assets/
 ├── images/
-│   └── Onboarding/                    # 9 intro screenshots (Supervisor, Driver, Manager)
+│   └── Onboarding/                    # 9 intro screenshots (Supplier, Driver, Manager)
 └── mock_data/
-    ├── authentication.json            # 12 users (2 supervisors, 4 managers, 6 drivers)
+    ├── authentication.json            # 12 users (2 suppliers, 4 managers, 6 drivers)
     ├── deliveries.json                # 14 deliveries (truckId + stationId FK, supports inProgress/completed)
     ├── maintenance.json               # 14 records (assignedToId FK)
     ├── stations.json                  # 11 stations (2 depots, 9 gas stations)
@@ -90,8 +90,8 @@ assets/
 | `/login` | `LoginPage` | — |
 | `/register` | `PlaceholderPage` | — |
 | `/driver/home` | `DriverScreen` (bottom nav: Map, Maintenance, Deliveries, Profile) | Driver |
-| `/manager/home` | `ManagerScreen` (sidebar: Dashboard, Fuel Monitoring, Fleet Tracking, Maintenance, Theft Detection) | Manager |
-| `/supervisor/home` | `SupervisorScreen` (sidebar: Dashboard, Users, Maintenance, Fleet, Theft) | Supervisor |
+| `/manager/home` | `ManagerScreen` (sidebar: Dashboard, Fuel Monitoring, Theft Detection) | Manager |
+| `/supplier/home` | `SupplierScreen` (sidebar: Dashboard, Users, Maintenance, Fleet, Theft) | Supplier |
 | `/profile` | `ProfilePage` | All |
 | `/settings` | `PlaceholderPage` | All |
 
@@ -118,8 +118,8 @@ All data is read from `assets/mock_data/`:
 
 | File | Contents | Key Relationships |
 |------|----------|-------------------|
-| `authentication.json` | 12 user accounts (2 supervisors, 4 managers, 6 drivers) | Roles: `supervisor`, `manager`, `driver` |
-| `vehicles.json` | 9 trucks with `supervisorId`, `driverId`, `fuelLevel`, `tankCapacity`, status | `truckId` ← `deliveries.truckId`, `theft_alerts.vehicleId` |
+| `authentication.json` | 12 user accounts (2 suppliers, 4 managers, 6 drivers) | Roles: `supplier`, `manager`, `driver` |
+| `vehicles.json` | 9 trucks with `supplierId`, `driverId`, `fuelLevel`, `tankCapacity`, status | `truckId` ← `deliveries.truckId`, `theft_alerts.vehicleId` |
 | `stations.json` | 11 stations in Batangas area, types: `depot`, `gasStation` | `stationId` ← `deliveries.stationId`, `stationType` differentiates depot vs gas station |
 | `deliveries.json` | 14 deliveries with `truckId`, `stationId`, `sourceStation`, product, quantity, status (`scheduled`/`inProgress`/`completed`) | FK: `truckId` → `vehicles.truckId`, `stationId`/`sourceStation` → `stations.stationId` |
 | `maintenance.json` | 14 service records with `vehicleId`, `assignedToId` (driver/manager) | FK: `assignedToId` → `authentication.id` |
@@ -128,12 +128,12 @@ All data is read from `assets/mock_data/`:
 ### Data Model
 
 **Two location types:**
-- **Depots** (`type: "depot"`) — Company-owned fuel storage hubs. Trucks start here after loading fuel. Supply origin for all deliveries. Two depots: FleetSense Depot Batangas City (supervisor 9) and FleetSense Depot Lipa (supervisor 10).
+- **Depots** (`type: "depot"`) — Company-owned fuel storage hubs. Trucks start here after loading fuel. Supply origin for all deliveries. Two depots: FleetSense Depot Batangas City (supplier 9) and FleetSense Depot Lipa (supplier 10).
 - **Gas Stations** (`type: "gasStation"`) — Customer delivery endpoints. Trucks deliver fuel here.
 
 **Supply chain flow:**
 ```
-   Supervisor → Depot → Truck starts at depot → Gas Station delivery
+   Supplier → Depot → Truck starts at depot → Gas Station delivery
 ```
 
 **Delivery relationships:**
@@ -146,9 +146,9 @@ Each delivery has a `sourceStation` (the depot the truck loads from) and a `stat
 | 12 | Pedro Gonzales | TRK-008 | FleetSense Depot Batangas | Idle |
 
 **Truck status & live simulation:**
-Truck status is driven by both static JSON data and runtime state. Trucks with `"En Route"` in `vehicles.json` map to `TruckStatus.moving` in the supervisor fleet dashboard. On the driver's deliveries page, the truck status shows `"En Route"` when either an active navigation route is running or the static JSON status is `"En Route"`, and `"Idle"` otherwise.
+Truck status is driven by both static JSON data and runtime state. Trucks with `"En Route"` in `vehicles.json` map to `TruckStatus.moving` in the supplier fleet dashboard. On the driver's deliveries page, the truck status shows `"En Route"` when either an active navigation route is running or the static JSON status is `"En Route"`, and `"Idle"` otherwise.
 
-On the supervisor fleet tracking page, en-route trucks are animated via `NavigationSimulator` — they move along OSRM routes from their current position through their in-progress and scheduled delivery stops. Simulators update positions every 2 seconds and trigger arrival notifications at each stop. The simulator guards against `speedKph = 0` (falls back to 45 kph) to prevent division-by-zero Infinity errors in ETA calculations.
+On the supplier fleet tracking page, en-route trucks are animated via `NavigationSimulator` — they move along OSRM routes from their current position through their in-progress and scheduled delivery stops. Simulators update positions every 2 seconds and trigger arrival notifications at each stop. The simulator guards against `speedKph = 0` (falls back to 45 kph) to prevent division-by-zero Infinity errors in ETA calculations.
 
 No backend or real database is required.
 
@@ -180,7 +180,7 @@ The driver shell uses a **bottom tab bar** with four tabs, preserving page state
 
 *Runtime status* — Deliveries completed during simulation (via `NavigationSimulator` stop arrivals) are tracked in a `_completedDeliveryIds` set shared between the map and deliveries pages via the parent `DriverScreen`. The deliveries page overrides each tile's displayed status using this set — deliveries reached en route show as "Completed" without modifying the static JSON data. KPI counts adjust accordingly.
 
-**Map** — navigation interface with live position simulation via `NavigationSimulator`. Renders an interactive `flutter_map` inside a `ClipRRect` with rounded corners, using light OpenStreetMap tiles (consistent with the supervisor fleet tracking page). Features:
+**Map** — navigation interface with live position simulation via `NavigationSimulator`. Renders an interactive `flutter_map` inside a `ClipRRect` with rounded corners, using light OpenStreetMap tiles (consistent with the supplier fleet tracking page). Features:
 - Driver's current position marker (set from the truck's `currentLocation` in `vehicles.json`, updated in real-time by the simulator).
 - Source depot markers (blue warehouse icon) showing fuel origin points for deliveries.
 - Destination markers (orange gas pump icon) showing delivery stops.
@@ -198,24 +198,15 @@ The driver shell uses a **bottom tab bar** with four tabs, preserving page state
 
 ### Manager
 
-The manager shell uses a **sidebar** with five pages, preserving page state via `IndexedStack`.
+The manager shell uses a **sidebar** with three pages (all currently placeholders showing "Coming soon").
 
-**Dashboard** — analytics hub with real-time fuel inventory, sales metrics, and operational status tracking.
+- **Dashboard** — placeholder
+- **Fuel Monitoring** — placeholder
+- **Theft Detection** — placeholder
 
-**Fuel Monitoring** — real-time tank level monitoring with low-stock alerts and consumption tracking.
+### Supplier
 
-**Fleet Tracking** — live fleet monitoring with automatic position simulation for en-route trucks:
-- Interactive map showing color-coded truck markers with `MarkerLayer(rotate: true)` for screen-upright rendering. Moving trucks use green, gas station markers use orange, depot markers use blue.
-- En-route trucks automatically animated via `NavigationSimulator` along OSRM routes.
-- OSRM route polyline split into traveled (dimmed) and remaining (bright) segments.
-
-**Maintenance** — full maintenance lifecycle management covering driver-submitted requests. KPI row (Total, Pending, In Progress, Overdue, Completed), cost analytics (Total Spent, Avg per Request, In Progress, Completed) with a cost-by-type bar chart, requests-by-type bar chart, status-distribution pie chart, and three-column record list (Pending Requests / Active / Service History). Pending requests show an "Approve/Reject" dialog (approve with scheduled date and note, or reject with required reason). The status workflow progresses through Pending → Scheduled → In Progress → Completed, with progress notes on each transition and cost recording on completion. Cancelled records display the rejection reason. Each record card shows type, vehicle, status/priority badges, dates, assigned user, cost, notes, and contextual action buttons based on current status.
-
-**Theft Detection** — security incident management. Defines alert types (fuelTheft, unauthorizedAccess, gpsTampering, routeDeviation), severities (critical → low), and statuses (new → investigating → resolved/dismissed). KPI row (Total, Critical, Investigating, Resolved), alerts-by-type bar chart, severity-distribution pie chart, and two-column list (Active / Resolved & Dismissed) with update-status workflow.
-
-### Supervisor
-
-The supervisor shell uses a **sidebar** with five pages, preserving page state via `IndexedStack`.
+The supplier shell uses a **sidebar** with five pages, preserving page state via `IndexedStack`.
 
 **Dashboard** — analytics hub with:
 - Time-based greeting banner (Morning/Afternoon/Evening) with user/company badges.
@@ -236,9 +227,11 @@ The supervisor shell uses a **sidebar** with five pages, preserving page state v
 - Truck Fuel Monitoring list with fuel progress bars and color thresholds.
 - Fuel analytics KPIs + bar chart.
 
+**Maintenance** — full maintenance lifecycle management covering driver-submitted requests. KPI row (Total, Pending, In Progress, Overdue, Completed), cost analytics (Total Spent, Avg per Request, In Progress, Completed) with a cost-by-type bar chart, requests-by-type bar chart, status-distribution pie chart, and three-column record list (Pending Requests / Active / Service History). Pending requests show an "Approve/Reject" dialog (approve with scheduled date and note, or reject with required reason). The status workflow progresses through Pending → Scheduled → In Progress → Completed, with progress notes on each transition and cost recording on completion. Cancelled records display the rejection reason. Each record card shows type, vehicle, status/priority badges, dates, assigned user, cost, notes, and contextual action buttons based on current status.
+
 **Theft Detection** — security incident management. Defines alert types (fuelTheft, unauthorizedAccess, gpsTampering, routeDeviation), severities (critical → low), and statuses (new → investigating → resolved/dismissed). KPI row (Total, Critical, Investigating, Resolved), alerts-by-type bar chart, severity-distribution pie chart, and two-column list (Active / Resolved & Dismissed) with update-status workflow.
 
-**User Dashboard** — user CRUD for supervisors. Analytics row (Total Users, Managers, Drivers, Supervisors), role/company pie and bar charts, search + role filter toolbar, and a horizontally scrollable `DataTable` (columns: User ID, Name, Company, Role, Email, Plate Number, Actions). Add/Edit dialogs with conditional fields (plate number, assigned supervisor, location), delete with confirmation. Filters users by the logged-in supervisor's `assignedSupervisorId`.
+**User Dashboard** — user CRUD for suppliers. Analytics row (Total Users, Managers, Drivers, Suppliers), role/company pie and bar charts, search + role filter toolbar, and a horizontally scrollable `DataTable` (columns: User ID, Name, Company, Role, Email, Plate Number, Actions). Add/Edit dialogs with conditional fields (plate number, assigned supplier, location), delete with confirmation. Filters users by the logged-in supplier's `assignedSupplierId`.
 
 ### Profile (Shared)
 

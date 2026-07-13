@@ -136,7 +136,7 @@ class _ProfileViewState extends State<ProfileView> {
           email: email ?? user.email,
           role: user.role,
           company: company ?? user.company,
-          supervisorId: user.supervisorId,
+          supplierId: user.supplierId,
           latitude: user.latitude,
           longitude: user.longitude,
         );
@@ -302,7 +302,7 @@ class _ProfileViewState extends State<ProfileView> {
             email: emailCtrl.text.trim(),
             role: user.role,
             company: companyCtrl.text.trim(),
-            supervisorId: user.supervisorId,
+            supplierId: user.supplierId,
             latitude: user.latitude,
             longitude: user.longitude,
           );

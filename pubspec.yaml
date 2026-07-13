@@ -77,7 +77,7 @@ flutter:
   - assets/mock_data/theft_alerts.json
   - assets/mock_data/vehicles.json
   - assets/images/Onboarding/
-  - assets/images/Onboarding/supervisor/
+  - assets/images/Onboarding/supplier/
   - assets/images/Onboarding/manager/
   - assets/images/Onboarding/driver/
   - assets/images/logo/

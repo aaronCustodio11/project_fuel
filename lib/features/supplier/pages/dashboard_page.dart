@@ -10,15 +10,15 @@ import 'package:project_fuel/core/services/maintenance_service.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:project_fuel/shared/widgets/action_button.dart';
 
-class SupervisorDashboard extends StatefulWidget {
+class SupplierDashboard extends StatefulWidget {
   final void Function(int index)? onNavigate;
-  const SupervisorDashboard({super.key, this.onNavigate});
+  const SupplierDashboard({super.key, this.onNavigate});
 
   @override
-  State<SupervisorDashboard> createState() => _SupervisorDashboardState();
+  State<SupplierDashboard> createState() => _SupplierDashboardState();
 }
 
-class _SupervisorDashboardState extends State<SupervisorDashboard>
+class _SupplierDashboardState extends State<SupplierDashboard>
     with SingleTickerProviderStateMixin {
   final _authService = AuthenticationService();
 
@@ -63,7 +63,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard>
     final maintenance = results[3] as List<MaintenanceRecord>;
     final theftAlerts = results[4] as List<dynamic>;
     final authUsers = results[5] as List<dynamic>;
-    final supervisorId = user?.supervisorId;
+    final supplierId = user?.supplierId;
 
     if (mounted) {
       setState(() {
@@ -71,7 +71,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard>
         _trucks = vehicles
             .whereType<Map<String, dynamic>>()
             .map((v) => FleetTruck.fromVehicleJson(v))
-            .where((t) => supervisorId == null || t.supervisorId == supervisorId)
+            .where((t) => supplierId == null || t.supplierId == supplierId)
             .toList();
         _maintenanceRecords = maintenance;
         _theftAlerts = theftAlerts.whereType<Map<String, dynamic>>().toList();
@@ -231,7 +231,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _currentUser?.fullName ?? 'Supervisor',
+                  _currentUser?.fullName ?? 'Supplier',
                   style: theme.textTheme.headlineMedium?.copyWith(
                     color: scheme.onPrimary,
                     fontWeight: FontWeight.w700,
@@ -699,8 +699,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard>
     int countBy(String role) => _authUsers.where((u) => u['role'] == role).length;
     final managers = countBy('Manager');
     final drivers = countBy('Driver');
-    final supervisors = countBy('Supervisor');
-    final total = managers + drivers + supervisors;
+    final suppliers = countBy('Supplier');
+    final total = managers + drivers + suppliers;
 
     return RepaintBoundary(
       child: PieChart(
@@ -710,8 +710,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard>
               PieSection(value: managers.toDouble(), label: 'Managers', color: AppTheme.accentBlue),
             if (drivers > 0)
               PieSection(value: drivers.toDouble(), label: 'Drivers', color: AppTheme.warningAmber),
-            if (supervisors > 0)
-              PieSection(value: supervisors.toDouble(), label: 'Supervisors', color: AppTheme.brandBlueDark),
+            if (suppliers > 0)
+              PieSection(value: suppliers.toDouble(), label: 'Suppliers', color: AppTheme.brandBlueDark),
           ],
           holeRadius: 0.45,
           segmentGap: 2,

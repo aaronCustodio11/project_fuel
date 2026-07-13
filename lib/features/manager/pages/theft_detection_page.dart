@@ -24,7 +24,7 @@ class TheftAlert {
   final String? resolvedBy;
   final DateTime? resolvedAt;
   final String reportedBy;
-  final String supervisorName;
+  final String supplierName;
 
   const TheftAlert({
     required this.id,
@@ -39,7 +39,7 @@ class TheftAlert {
     this.resolvedBy,
     this.resolvedAt,
     required this.reportedBy,
-    required this.supervisorName,
+    required this.supplierName,
   });
 }
 
@@ -56,8 +56,8 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
 
   final _nextId = ValueNotifier<int>(8);
 
-  late final Map<String, String> _vehicleSupervisorMap = {};
-  late final Map<int, String> _supervisorNameMap = {};
+  late final Map<String, String> _vehicleSupplierMap = {};
+  late final Map<int, String> _supplierNameMap = {};
 
   @override
   void initState() {
@@ -88,17 +88,17 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
       if (id != null) {
         userNameMap[id] = '${u['firstName'] ?? ''} ${u['surName'] ?? ''}'.trim();
         final role = u['role'] as String?;
-        if (role == 'Supervisor') {
-          _supervisorNameMap[id] = u['company'] as String? ?? userNameMap[id]!;
+        if (role == 'Supplier') {
+          _supplierNameMap[id] = u['company'] as String? ?? userNameMap[id]!;
         }
       }
     }
 
     for (final v in vehicles) {
       final vm = v as Map<String, dynamic>;
-      final sid = vm['supervisorId'] as int?;
+      final sid = vm['supplierId'] as int?;
       if (sid != null) {
-        _vehicleSupervisorMap[vm['truckId'] as String] = _supervisorNameMap[sid] ?? 'Unknown Supervisor';
+        _vehicleSupplierMap[vm['truckId'] as String] = _supplierNameMap[sid] ?? 'Unknown Supplier';
       }
     }
 
@@ -142,7 +142,7 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
       }
 
       final resolvedById = a['resolvedBy'] as int?;
-      final sid = vehicle?['supervisorId'] as int?;
+      final sid = vehicle?['supplierId'] as int?;
 
       return TheftAlert(
         id: a['id'] as String? ?? '',
@@ -161,7 +161,7 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
             ? DateTime.tryParse(a['resolvedAt'] as String)
             : null,
         reportedBy: detectedBy != null ? userNameMap[detectedBy] ?? 'Unknown' : 'Unknown',
-        supervisorName: sid != null ? _supervisorNameMap[sid] ?? 'Unknown Supervisor' : 'Unknown Supervisor',
+        supplierName: sid != null ? _supplierNameMap[sid] ?? 'Unknown Supplier' : 'Unknown Supplier',
       );
     }).toList();
 
@@ -221,7 +221,7 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
     final descCtrl = TextEditingController();
     String? selectedType;
     String? selectedSeverity;
-    String? targetSupervisor;
+    String? targetSupplier;
 
     showDialog(
       context: context,
@@ -257,7 +257,7 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('Report Theft Incident', style: theme.textTheme.headlineMedium),
-                              Text('This will be sent to the vehicle\'s supervisor for review',
+                              Text('This will be sent to the vehicle\'s supplier for review',
                                   style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                             ],
                           ),
@@ -273,18 +273,18 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
                         prefixIcon: Icon(Icons.local_shipping_outlined),
                       ),
                       onChanged: (v) {
-                        final sid = _vehicleSupervisorMap[v.trim().toUpperCase()];
-                        targetSupervisor = sid;
+                        final sid = _vehicleSupplierMap[v.trim().toUpperCase()];
+                        targetSupplier = sid;
                       },
                       validator: (v) {
                         if (v == null || v.trim().isEmpty) return 'Enter vehicle ID';
-                        if (!_vehicleSupervisorMap.containsKey(v.trim().toUpperCase())) {
+                        if (!_vehicleSupplierMap.containsKey(v.trim().toUpperCase())) {
                           return 'Unknown vehicle';
                         }
                         return null;
                       },
                     ),
-                    if (targetSupervisor != null) ...[
+                    if (targetSupplier != null) ...[
                       const SizedBox(height: FleetSpacing.sm),
                       Container(
                         padding: const EdgeInsets.all(FleetSpacing.sm),
@@ -296,7 +296,7 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
                           children: [
                             Icon(Icons.send_rounded, size: 14, color: AppTheme.accentBlue),
                             const SizedBox(width: FleetSpacing.sm),
-                            Text('Will be sent to $targetSupervisor',
+                            Text('Will be sent to $targetSupplier',
                                 style: theme.textTheme.labelMedium?.copyWith(color: AppTheme.accentBlue)),
                           ],
                         ),
@@ -361,7 +361,7 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
                             }
                           },
                           icon: const Icon(Icons.send_rounded, size: 16),
-                          label: const Text('Send to Supervisor'),
+                          label: const Text('Send to Supplier'),
                         ),
                       ],
                     ),
@@ -415,17 +415,17 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
       location: '',
       description: description,
       reportedBy: 'Angela Lopez',
-      supervisorName: _vehicleSupervisorMap[vehicleId] ?? 'Unknown Supervisor',
+      supplierName: _vehicleSupplierMap[vehicleId] ?? 'Unknown Supplier',
     );
 
     setState(() {
       _alerts.insert(0, alert);
     });
 
-    _showReportSubmitted(alert.supervisorName);
+    _showReportSubmitted(alert.supplierName);
   }
 
-  void _showReportSubmitted(String supervisorName) {
+  void _showReportSubmitted(String supplierName) {
     showDialog(
       context: context,
       builder: (c) => AlertDialog(
@@ -440,8 +440,8 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
           ],
         ),
         content: Text(
-          'Theft report has been sent to $supervisorName for review. '
-          'You will be notified when the supervisor updates the status.',
+          'Theft report has been sent to $supplierName for review. '
+          'You will be notified when the supplier updates the status.',
         ),
         actions: [
           FilledButton(
@@ -496,7 +496,7 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
                   children: [
                     Text('Theft Detection', style: theme.textTheme.headlineLarge),
                     const SizedBox(height: 4),
-                    Text('Report incidents to supervisors and track resolution',
+                    Text('Report incidents to suppliers and track resolution',
                         style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
                   ],
                 ),
@@ -514,25 +514,25 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
             children: [
               Expanded(child: _KpiCard(
                 label: 'Total Sent', value: '$total',
-                subtitle: 'Reports to supervisors', icon: Icons.send_rounded,
+                subtitle: 'Reports to suppliers', icon: Icons.send_rounded,
                 accentColor: scheme.primary,
               )),
               const SizedBox(width: FleetSpacing.md),
               Expanded(child: _KpiCard(
                 label: 'Pending Review', value: '$pendingReview',
-                subtitle: 'Awaiting supervisor', icon: Icons.hourglass_empty,
+                subtitle: 'Awaiting supplier', icon: Icons.hourglass_empty,
                 accentColor: AppTheme.warningAmber,
               )),
               const SizedBox(width: FleetSpacing.md),
               Expanded(child: _KpiCard(
                 label: 'Investigating', value: '$investigating',
-                subtitle: 'Supervisor acting', icon: Icons.search,
+                subtitle: 'Supplier acting', icon: Icons.search,
                 accentColor: AppTheme.accentBlue,
               )),
               const SizedBox(width: FleetSpacing.md),
               Expanded(child: _KpiCard(
                 label: 'Resolved', value: '$resolved',
-                subtitle: 'Closed by supervisor', icon: Icons.check_circle_outline,
+                subtitle: 'Closed by supplier', icon: Icons.check_circle_outline,
                 accentColor: AppTheme.successGreen,
               )),
             ],
@@ -564,7 +564,7 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
                   flex: 2,
                   child: _ChartCard(
                     title: 'Status Overview',
-                    subtitle: 'Supervisor resolution progress',
+                    subtitle: 'Supplier resolution progress',
                     child: _buildStatusChart(),
                   ),
                 ),
@@ -973,7 +973,7 @@ class _AlertCard extends StatelessWidget {
             children: [
               Icon(Icons.business_outlined, size: 12, color: scheme.onSurfaceVariant),
               const SizedBox(width: FleetSpacing.xs),
-              Text('Sent to ${alert.supervisorName}',
+              Text('Sent to ${alert.supplierName}',
                   style: theme.textTheme.labelSmall?.copyWith(color: AppTheme.accentBlue)),
               const Spacer(),
               Icon(Icons.access_time, size: 12, color: scheme.onSurfaceVariant),
@@ -1032,7 +1032,7 @@ class _AlertCard extends StatelessWidget {
                 children: [
                   Icon(Icons.hourglass_empty, size: 14, color: AppTheme.warningAmber),
                   const SizedBox(width: FleetSpacing.sm),
-                  Text('Awaiting review by ${alert.supervisorName}',
+                  Text('Awaiting review by ${alert.supplierName}',
                       style: theme.textTheme.labelSmall?.copyWith(color: AppTheme.warningAmber)),
                 ],
               ),
@@ -1057,7 +1057,7 @@ class _AlertCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: FleetSpacing.sm),
-                  Text('${alert.supervisorName} is investigating this report',
+                  Text('${alert.supplierName} is investigating this report',
                       style: theme.textTheme.labelSmall?.copyWith(color: AppTheme.accentBlue)),
                 ],
               ),

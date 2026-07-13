@@ -9,7 +9,7 @@
     "capacity": 50000,
     "currentStock": 32000,
     "managerId": 3,
-    "supervisorId": 9
+    "supplierId": 9
   },
   {
     "stationId": "STN-002",
@@ -21,7 +21,7 @@
     "capacity": 30000,
     "currentStock": 15000,
     "managerId": 3,
-    "supervisorId": 9
+    "supplierId": 9
   },
   {
     "stationId": "STN-003",
@@ -33,7 +33,7 @@
     "capacity": 40000,
     "currentStock": 28000,
     "managerId": 4,
-    "supervisorId": 9
+    "supplierId": 9
   },
   {
     "stationId": "STN-004",
@@ -45,7 +45,7 @@
     "capacity": 25000,
     "currentStock": 12000,
     "managerId": 4,
-    "supervisorId": 9
+    "supplierId": 9
   },
   {
     "stationId": "STN-006",
@@ -57,7 +57,7 @@
     "capacity": 20000,
     "currentStock": 8000,
     "managerId": 7,
-    "supervisorId": 10
+    "supplierId": 10
   },
   {
     "stationId": "STN-007",
@@ -69,7 +69,7 @@
     "capacity": 15000,
     "currentStock": 9500,
     "managerId": 8,
-    "supervisorId": 10
+    "supplierId": 10
   },
   {
     "stationId": "STN-008",
@@ -81,7 +81,7 @@
     "capacity": 18000,
     "currentStock": 11000,
     "managerId": 8,
-    "supervisorId": 10
+    "supplierId": 10
   },
   {
     "stationId": "STN-009",
@@ -93,7 +93,7 @@
     "capacity": 45000,
     "currentStock": 30000,
     "managerId": 7,
-    "supervisorId": 10
+    "supplierId": 10
   },
   {
     "stationId": "STN-010",
@@ -105,7 +105,7 @@
     "capacity": 12000,
     "currentStock": 5000,
     "managerId": 8,
-    "supervisorId": 10
+    "supplierId": 10
   },
   {
     "stationId": "STN-011",
@@ -117,7 +117,7 @@
     "capacity": 22000,
     "currentStock": 14000,
     "managerId": 8,
-    "supervisorId": 10
+    "supplierId": 10
   },
   {
     "stationId": "STN-012",
@@ -129,6 +129,6 @@
     "capacity": 10000,
     "currentStock": 7000,
     "managerId": 7,
-    "supervisorId": 10
+    "supplierId": 10
   }
 ]
