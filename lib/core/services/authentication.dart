@@ -35,7 +35,7 @@ class AuthenticationService {
           email: item['email'] as String? ?? normalizedEmail, // Retain original casing if preferred
           role: (item['role'] as String? ?? '').trim(),
           company: item['company'] as String? ?? '',
-          supplierId: _parseInt(item['supplierId'] ?? item['assignedSupplierId']),
+          supervisorId: _parseInt(item['supervisorId'] ?? item['assignedSupervisorId']),
           latitude: _parseDouble(location?['latitude']),   // Mapped
           longitude: _parseDouble(location?['longitude']), // Mapped
         );
@@ -82,7 +82,7 @@ class AuthenticationService {
           email: item['email'] as String? ?? normalizedEmail,
           role: (item['role'] as String? ?? '').trim(),
           company: item['company'] as String? ?? '',
-          supplierId: _parseInt(item['supplierId'] ?? item['assignedSupplierId']),
+          supervisorId: _parseInt(item['supervisorId'] ?? item['assignedSupervisorId']),
           latitude: _parseDouble(location?['latitude']),   // Mapped
           longitude: _parseDouble(location?['longitude']), // Mapped
         );
@@ -118,8 +118,8 @@ class AuthenticationService {
         return '/driver/home';
       case 'manager':
         return '/manager/home';
-      case 'supplier':
-        return '/supplier/home';
+      case 'supervisor':
+        return '/supervisor/home';
       default:
         return '/login';
     }

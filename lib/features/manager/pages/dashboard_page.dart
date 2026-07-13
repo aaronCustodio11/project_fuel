@@ -57,7 +57,7 @@ class _ManagerDashboardState extends State<ManagerDashboard>
     final vehicles = results[1] as List<dynamic>;
     final rawStations = results[2] as List<dynamic>;
     final theftAlerts = results[3] as List<dynamic>;
-    final supplierId = user?.supplierId;
+    final supervisorId = user?.supervisorId;
     final managerId = user?.userId;
 
     if (mounted) {
@@ -66,7 +66,7 @@ class _ManagerDashboardState extends State<ManagerDashboard>
         _trucks = vehicles
             .whereType<Map<String, dynamic>>()
             .map((v) => FleetTruck.fromVehicleJson(v))
-            .where((t) => supplierId == null || t.supplierId == supplierId)
+            .where((t) => supervisorId == null || t.supervisorId == supervisorId)
             .toList();
         _stations = rawStations
             .whereType<Map<String, dynamic>>()

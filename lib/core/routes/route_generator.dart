@@ -4,7 +4,7 @@ import 'package:project_fuel/features/authentication/pages/splash_page.dart';
 import 'package:project_fuel/features/driver/driver_screen.dart';
 import 'package:project_fuel/features/manager/manager_screen.dart';
 import 'package:project_fuel/features/profile/pages/profile_page.dart';
-import 'package:project_fuel/features/supplier/supplier_screen.dart';
+import 'package:project_fuel/features/supervisor/supervisor_screen.dart';
 
 import 'app_routes.dart';
 
@@ -28,8 +28,8 @@ class RouteGenerator {
       case AppRoutes.managerHome:
         return _buildRoute(settings, const ManagerScreen());
 
-      case AppRoutes.supplierHome:
-        return _buildRoute(settings, const SupplierScreen());
+      case AppRoutes.supervisorHome:
+        return _buildRoute(settings, const SupervisorScreen());
 
       case AppRoutes.profile:
         return _buildRoute(settings, const ProfileScreenPage());

@@ -11,7 +11,7 @@ class FleetTruck {
   final LatLng position;
   final TruckStatus status;
   final int? driverId;
-  final int? supplierId;
+  final int? supervisorId;
   final double? speed;
   final double? fuelLevel;
   final String? lastUpdate;
@@ -23,7 +23,7 @@ class FleetTruck {
     required this.position,
     required this.status,
     this.driverId,
-    this.supplierId,
+    this.supervisorId,
     this.speed,
     this.fuelLevel,
     this.lastUpdate,
@@ -48,7 +48,7 @@ class FleetTruck {
       ),
       status: status,
       driverId: json['driverId'] as int?,
-      supplierId: json['supplierId'] as int?,
+      supervisorId: json['supervisorId'] as int?,
       speed: (json['speedKph'] as num?)?.toDouble(),
       fuelLevel: (json['fuelLevel'] as num?)?.toDouble(),
       lastUpdate: null,
@@ -64,7 +64,7 @@ class FleetStation {
   final String? address;
   final double? fuelLevel;
   final int? managerId;
-  final int? supplierId;
+  final int? supervisorId;
 
   const FleetStation({
     required this.id,
@@ -74,7 +74,7 @@ class FleetStation {
     this.address,
     this.fuelLevel,
     this.managerId,
-    this.supplierId,
+    this.supervisorId,
   });
 
   factory FleetStation.fromJson(Map<String, dynamic> json) {
@@ -96,7 +96,7 @@ class FleetStation {
               .clamp(0.0, 1.0)
           : null,
       managerId: json['managerId'] as int?,
-      supplierId: json['supplierId'] as int?,
+      supervisorId: json['supervisorId'] as int?,
     );
   }
 }

@@ -11,9 +11,9 @@ class AppRoutes {
 
   // Station Manager
   static const managerHome = '/manager/home';
+  // Supervisor
 
-  // Supplier
-  static const supplierHome = '/supplier/home';
+  static const supervisorHome = '/supervisor/home';
 
   // Shared
   static const profile = '/profile';

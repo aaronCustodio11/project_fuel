@@ -2,7 +2,7 @@ class TruckModel {
   final String truckId;
   final String plateNumber;
   final int? driverId;
-  final int supplierId;
+  final int supervisorId;
   final String status;
   final int speedKph;
   final int heading;
@@ -17,7 +17,7 @@ class TruckModel {
     required this.truckId,
     required this.plateNumber,
     this.driverId,
-    this.supplierId = 0,
+    this.supervisorId = 0,
     this.status = '',
     this.speedKph = 0,
     this.heading = 0,
@@ -34,7 +34,7 @@ class TruckModel {
       truckId: json['truckId'] as String? ?? '',
       plateNumber: json['plateNumber'] as String? ?? '',
       driverId: json['driverId'] as int?,
-      supplierId: json['supplierId'] as int? ?? 0,
+      supervisorId: json['supervisorId'] as int? ?? 0,
       status: json['status'] as String? ?? '',
       speedKph: json['speedKph'] as int? ?? 0,
       heading: json['heading'] as int? ?? 0,
