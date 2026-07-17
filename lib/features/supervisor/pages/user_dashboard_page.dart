@@ -370,6 +370,17 @@ class _UserDashboardState extends State<UserDashboard> {
             value: _countByRole('Manager').toString(),
             icon: Icons.badge_outlined,
             accentColor: AppTheme.accentBlue,
+            overviewLabel: 'Overview',
+            onOverviewTap: () {
+              final managers = _users.where((u) => u.role == 'Manager').toList();
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => RoleOverviewPage(
+                  title: 'Managers Overview',
+                  users: managers,
+                  accentColor: AppTheme.accentBlue,
+                ),
+              ));
+            },
           ),
         ),
         const SizedBox(width: FleetSpacing.md),
@@ -379,6 +390,17 @@ class _UserDashboardState extends State<UserDashboard> {
             value: _countByRole('Driver').toString(),
             icon: Icons.local_shipping_outlined,
             accentColor: AppTheme.warningAmber,
+            overviewLabel: 'Overview',
+            onOverviewTap: () {
+              final drivers = _users.where((u) => u.role == 'Driver').toList();
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => RoleOverviewPage(
+                  title: 'Drivers Overview',
+                  users: drivers,
+                  accentColor: AppTheme.warningAmber,
+                ),
+              ));
+            },
           ),
         ),
         const SizedBox(width: FleetSpacing.md),
@@ -661,12 +683,16 @@ class _AnalyticsCard extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.accentColor,
+    this.overviewLabel,
+    this.onOverviewTap,
   });
 
   final String label;
   final String value;
   final IconData icon;
   final Color accentColor;
+  final String? overviewLabel;
+  final VoidCallback? onOverviewTap;
 
   @override
   Widget build(BuildContext context) {
@@ -697,25 +723,40 @@ class _AnalyticsCard extends StatelessWidget {
                   children: [
                     Icon(icon, size: 22, color: accentColor),
                     const SizedBox(width: FleetSpacing.sm),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          value,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        Text(
-                          label,
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
-                      ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            value,
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            label,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
                     ),
+                    if (onOverviewTap != null)
+                      SizedBox(
+                        height: 32,
+                        width: 32,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: onOverviewTap,
+                            borderRadius: BorderRadius.circular(FleetRadius.sm),
+                            child: Icon(Icons.open_in_new_rounded, size: 18, color: accentColor),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -1138,6 +1179,155 @@ class _ChartCard extends StatelessWidget {
           const SizedBox(height: FleetSpacing.md),
           Expanded(child: child),
         ],
+      ),
+    );
+  }
+}
+
+class RoleOverviewPage extends StatelessWidget {
+  const RoleOverviewPage({
+    super.key,
+    required this.title,
+    required this.users,
+    required this.accentColor,
+  });
+
+  final String title;
+  final List<ManagedUser> users;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    final companies = users.map((u) => u.company).toSet().toList()..sort();
+    final companyCounts = companies.map((c) => users.where((u) => u.company == c).length).toList();
+    final companyColors = [
+      AppTheme.accentBlue, AppTheme.warningAmber, AppTheme.successGreen,
+      AppTheme.dangerRed, AppTheme.brandBlueDark, AppTheme.neutralGray500,
+    ];
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(FleetSpacing.lg),
+        children: [
+          Row(
+            children: [
+              _StatBadge(value: users.length.toString(), label: 'Total', color: accentColor),
+              const SizedBox(width: FleetSpacing.md),
+              _StatBadge(value: companies.length.toString(), label: 'Companies', color: AppTheme.accentBlue),
+            ],
+          ),
+          const SizedBox(height: FleetSpacing.lg),
+          Container(
+            padding: const EdgeInsets.all(FleetSpacing.md),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(FleetRadius.md),
+              border: Border.all(color: scheme.outline),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Users by Company', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(height: FleetSpacing.md),
+                SizedBox(
+                  height: 200,
+                  child: PieChart(
+                    data: PieChartData(
+                      sections: List.generate(companies.length, (i) {
+                        return PieSection(
+                          value: companyCounts[i].toDouble(),
+                          label: companies[i].split('.').first,
+                          color: companyColors[i % companyColors.length],
+                        );
+                      }),
+                      segmentGap: 2,
+                      cornerRadius: 4,
+                      showLabels: true,
+                      labelPosition: PieLabelPosition.outside,
+                      labelConnector: PieLabelConnector.elbow,
+                    ),
+                    tooltip: const TooltipConfig(enabled: true),
+                    animation: const ChartAnimation.none(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: FleetSpacing.lg),
+          Text('All $title', style: theme.textTheme.titleMedium),
+          const SizedBox(height: FleetSpacing.md),
+          ...users.map((user) => Card(
+            margin: const EdgeInsets.only(bottom: FleetSpacing.sm),
+            child: Padding(
+              padding: const EdgeInsets.all(FleetSpacing.md),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: accentColor.withValues(alpha: 0.15),
+                    child: Text(
+                      '${user.firstName[0]}${user.surName[0]}',
+                      style: TextStyle(color: accentColor, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(width: FleetSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(user.fullName, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 2),
+                        Text(user.email, style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                        Text(user.company, style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+                        if (user.location != null)
+                          Text(user.location!, style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+                        if (user.plateNumber != null)
+                          Text('Plate: ${user.plateNumber}', style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatBadge extends StatelessWidget {
+  const _StatBadge({required this.value, required this.label, required this.color});
+
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: FleetSpacing.md, horizontal: FleetSpacing.md),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(FleetRadius.md),
+        ),
+        child: Column(
+          children: [
+            Text(value, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700, color: color)),
+            Text(label, style: theme.textTheme.labelSmall?.copyWith(color: color)),
+          ],
+        ),
       ),
     );
   }
