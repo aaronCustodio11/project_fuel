@@ -678,8 +678,8 @@ class _SupervisorFleetTrackingState extends State<SupervisorFleetTracking> {
                             child: _TypeToggle(
                               label: 'Warehouse',
                               icon: Icons.warehouse_outlined,
-                              selected: type == StationType.warehouse,
-                              onTap: () => typeNotifier.value = StationType.warehouse,
+                              selected: type == StationType.depot,
+                              onTap: () => typeNotifier.value = StationType.depot,
                             ),
                           ),
                         ],
@@ -787,7 +787,7 @@ class _SupervisorFleetTrackingState extends State<SupervisorFleetTracking> {
                                         ),
                                         title: const Text('Confirm'),
                                         content: Text(
-                                          'Add ${typeNotifier.value == StationType.gasStation ? 'Gas Station' : 'Warehouse'}'
+                                          'Add ${typeNotifier.value == StationType.gasStation ? 'Gas Station' : 'Depot'}'
                                           ' "${nameCtrl.text.trim()}" at this location?',
                                         ),
                                         actions: [
@@ -824,7 +824,7 @@ class _SupervisorFleetTrackingState extends State<SupervisorFleetTracking> {
                                         ),
                                         title: const Text('Success'),
                                         content: Text(
-                                          '${typeNotifier.value == StationType.gasStation ? 'Gas Station' : 'Warehouse'}'
+                                          '${typeNotifier.value == StationType.gasStation ? 'Gas Station' : 'Depot'}'
                                           ' "${nameCtrl.text}" has been added.',
                                         ),
                                         actions: [

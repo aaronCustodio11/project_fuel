@@ -2,7 +2,7 @@ import 'package:latlong2/latlong.dart';
 
 enum TruckStatus { moving, idle, maintenance, offDuty }
 
-enum StationType { gasStation, warehouse }
+enum StationType { gasStation, depot }
 
 class FleetTruck {
   final String id;
@@ -87,7 +87,8 @@ class FleetStation {
       ),
       type: switch (json['type'] as String? ?? '') {
         'gasStation' => StationType.gasStation,
-        _ => StationType.warehouse,
+        'depot' => StationType.depot,
+        _ => StationType.depot,
       },
       address: json['address'] as String?,
       fuelLevel: json['currentStock'] != null && json['capacity'] != null

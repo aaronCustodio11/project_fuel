@@ -72,6 +72,7 @@ flutter:
   assets:
   - assets/mock_data/authentication.json
   - assets/mock_data/deliveries.json
+  - assets/mock_data/orders.json
   - assets/mock_data/maintenance.json
   - assets/mock_data/stations.json
   - assets/mock_data/theft_alerts.json

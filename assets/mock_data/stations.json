@@ -130,5 +130,29 @@
     "currentStock": 7000,
     "managerId": 7,
     "supervisorId": 10
+  },
+  {
+    "stationId": "STN-005",
+    "name": "FleetSense Depot Lemery",
+    "type": "depot",
+    "lat": 13.8811,
+    "lng": 120.9147,
+    "address": "Lemery, Batangas",
+    "capacity": 40000,
+    "currentStock": 25000,
+    "managerId": 3,
+    "supervisorId": 9
+  },
+  {
+    "stationId": "STN-013",
+    "name": "FleetSense Depot Rosario",
+    "type": "depot",
+    "lat": 13.8452,
+    "lng": 121.2059,
+    "address": "Rosario, Batangas",
+    "capacity": 35000,
+    "currentStock": 22000,
+    "managerId": 7,
+    "supervisorId": 10
   }
 ]

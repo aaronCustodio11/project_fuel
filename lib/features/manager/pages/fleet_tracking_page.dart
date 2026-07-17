@@ -4,14 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:project_fuel/core/constants/delivery_conditions.dart';
 import 'package:project_fuel/core/models/fleet_tracking.dart';
+import 'package:project_fuel/core/models/order.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/deliveries.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/services/navigation_simulator.dart';
+import 'package:project_fuel/core/services/order_service.dart';
 import 'package:project_fuel/core/services/osrm_routing.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:project_fuel/shared/widgets/action_button.dart';
+import 'package:project_fuel/shared/widgets/warning_card.dart';
 
 class ManagerFleetTracking extends StatefulWidget {
   const ManagerFleetTracking({super.key});
@@ -41,6 +45,14 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
   final Map<String, NavigationSimulator> _simulators = {};
   final Map<String, LatLng> _livePositions = {};
 
+  bool _isCreateOrderMode = false;
+  FleetStation? _orderDepot;
+  FleetStation? _orderStation;
+  final _orderFuelTypeCtrl = TextEditingController(text: 'Diesel');
+  final _orderQuantityCtrl = TextEditingController();
+  DateTime _orderScheduledDate = DateTime.now().add(const Duration(days: 1));
+  final _orderService = OrderService();
+
   @override
   void initState() {
     super.initState();
@@ -68,7 +80,6 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
     final stations = results[1] as List<dynamic>;
     final user = results[3] as AuthUser?;
     final supervisorId = user?.supervisorId;
-    final managerId = user?.userId;
 
     if (mounted) {
       setState(() {
@@ -80,7 +91,7 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
         _stations = stations
             .whereType<Map<String, dynamic>>()
             .map((s) => FleetStation.fromJson(s))
-            .where((s) => managerId == null || s.managerId == managerId)
+            .where((s) => supervisorId == null || s.supervisorId == supervisorId)
             .toList();
         _userPosition = (user?.latitude != null && user?.longitude != null)
             ? LatLng(user!.latitude!, user.longitude!)
@@ -331,11 +342,37 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
                         style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
                   ],
                 ),
-                ActionButton(
-                  icon: Icons.notifications_outlined,
-                  label: 'Notify Truck',
-                  color: AppTheme.accentBlue,
-                  onTap: _showNotifyTruckSheet,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _isCreateOrderMode ? AppTheme.dangerRed : AppTheme.successGreen,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: FleetSpacing.md, vertical: FleetSpacing.sm),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(FleetRadius.sm)),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isCreateOrderMode = !_isCreateOrderMode;
+                          if (!_isCreateOrderMode) {
+                            _orderDepot = null;
+                            _orderStation = null;
+                            _orderQuantityCtrl.clear();
+                          }
+                        });
+                      },
+                      icon: Icon(_isCreateOrderMode ? Icons.close : Icons.add_location_alt_outlined, size: 16),
+                      label: Text(_isCreateOrderMode ? 'Cancel Order' : 'Create Order'),
+                    ),
+                    const SizedBox(width: FleetSpacing.sm),
+                    ActionButton(
+                      icon: Icons.notifications_outlined,
+                      label: 'Notify Truck',
+                      color: AppTheme.accentBlue,
+                      onTap: _showNotifyTruckSheet,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -464,6 +501,17 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
   }
 
   void _onItemTap(Object item) {
+    if (_isCreateOrderMode && item is FleetStation) {
+      final isDepot = item.type == StationType.depot;
+      setState(() {
+        if (isDepot) {
+          _orderDepot = item;
+        } else {
+          _orderStation = item;
+        }
+      });
+      return;
+    }
     if (item is FleetTruck) {
       _trackTruck(item);
     } else {
@@ -517,7 +565,7 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
                   for (final stop in _trackedStops)
                     _buildStopMarker(stop),
                 ] else ...[
-                  ..._trucks.map(_buildTruckMarker),
+                  if (!_isCreateOrderMode) ..._trucks.map(_buildTruckMarker),
                   ..._stations.map(_buildStationMarker),
                 ],
               ];
@@ -592,6 +640,10 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
   }
 
   Widget _buildSidePanel() {
+    if (_isCreateOrderMode) {
+      return _buildCreateOrderPanel();
+    }
+
     if (_trackingTruck != null && _trackedStops.isNotEmpty) {
       final truck = _trackingTruck!;
       final totalKm = _routePoints != null
@@ -689,6 +741,231 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
     }
 
     return _StationList(stations: _stations);
+  }
+
+  Widget _buildCreateOrderPanel() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final fuelTypes = ['Diesel', 'Gasoline', 'Premium Gasoline'];
+
+    return Container(
+      padding: const EdgeInsets.all(FleetSpacing.lg),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(FleetRadius.md),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.3)),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Create Order', style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                )),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () => setState(() {
+                    _isCreateOrderMode = false;
+                    _orderDepot = null;
+                    _orderStation = null;
+                    _orderQuantityCtrl.clear();
+                  }),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+            const SizedBox(height: FleetSpacing.md),
+            _buildOrderLocationTile(
+              icon: Icons.warehouse_outlined,
+              label: 'Fuel Source (Depot)',
+              station: _orderDepot,
+              color: AppTheme.brandBlue,
+            ),
+            const SizedBox(height: FleetSpacing.sm),
+            _buildOrderLocationTile(
+              icon: Icons.local_gas_station_rounded,
+              label: 'Delivery Destination',
+              station: _orderStation,
+              color: AppTheme.accentBlue,
+            ),
+            const SizedBox(height: FleetSpacing.md),
+            DropdownButtonFormField<String>(
+              value: _orderFuelTypeCtrl.text,
+              decoration: InputDecoration(
+                labelText: 'Fuel Type',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(FleetRadius.sm)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+              items: fuelTypes.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
+              onChanged: (v) {
+                if (v != null) _orderFuelTypeCtrl.text = v;
+              },
+            ),
+            const SizedBox(height: FleetSpacing.sm),
+            TextField(
+              controller: _orderQuantityCtrl,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Quantity (L)',
+                hintText: 'e.g. 5000',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(FleetRadius.sm)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: FleetSpacing.sm),
+            InkWell(
+              onTap: () => _pickScheduledDate(),
+              borderRadius: BorderRadius.circular(FleetRadius.sm),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Scheduled Date',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(FleetRadius.sm)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 16, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: FleetSpacing.sm),
+                    Text(
+                      '${_orderScheduledDate.month}/${_orderScheduledDate.day}/${_orderScheduledDate.year}',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: FleetSpacing.md),
+            if (_orderDepot != null && _orderStation != null) ...[
+              WarningCard(
+                message: DeliveryConditions.getWarning(
+                  DeliveryConditions.mockAmbientTemp,
+                  _orderFuelTypeCtrl.text,
+                ),
+                isActive: DeliveryConditions.hasActiveWarning(
+                  DeliveryConditions.mockAmbientTemp,
+                ),
+              ),
+              const SizedBox(height: FleetSpacing.md),
+            ],
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _orderDepot != null && _orderStation != null
+                    ? _submitCreateOrder
+                    : null,
+                icon: const Icon(Icons.add_circle_outline, size: 18),
+                label: const Text('Submit Order for Approval'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderLocationTile({
+    required IconData icon,
+    required String label,
+    required FleetStation? station,
+    required Color color,
+  }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(FleetSpacing.md),
+      decoration: BoxDecoration(
+        color: station != null ? color.withValues(alpha: 0.08) : scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(FleetRadius.sm),
+        border: Border.all(
+          color: station != null ? color.withValues(alpha: 0.3) : scheme.outline.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: station != null ? color : scheme.onSurfaceVariant),
+          const SizedBox(width: FleetSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: theme.textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                )),
+                const SizedBox(height: 2),
+                Text(
+                  station != null ? station.name : 'Tap on map to select',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: station != null ? null : scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (station != null)
+            Icon(Icons.check_circle, size: 18, color: color),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickScheduledDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _orderScheduledDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 180)),
+    );
+    if (picked != null && mounted) {
+      setState(() => _orderScheduledDate = picked);
+    }
+  }
+
+  Future<void> _submitCreateOrder() async {
+    if (_orderDepot == null || _orderStation == null) return;
+
+    final quantity = double.tryParse(_orderQuantityCtrl.text.trim());
+    if (quantity == null || quantity <= 0) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Please enter a valid quantity'),
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
+
+    final user = await _authService.getSavedUser();
+    if (user == null || !mounted) return;
+
+    final order = Order(
+      orderId: 'ORD-${DateTime.now().millisecondsSinceEpoch.toString().padLeft(3, '0').substring(0, 3)}',
+      depotId: _orderDepot!.id,
+      stationId: _orderStation!.id,
+      createdBy: user.userId,
+      fuelType: _orderFuelTypeCtrl.text,
+      quantity: quantity,
+      scheduledDate: _orderScheduledDate,
+      createdAt: DateTime.now(),
+    );
+
+    await _orderService.createOrder(order);
+
+    if (!mounted) return;
+    setState(() {
+      _isCreateOrderMode = false;
+      _orderDepot = null;
+      _orderStation = null;
+      _orderQuantityCtrl.clear();
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('${order.orderId} sent for supervisor approval'),
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   Widget _detailRow(IconData icon, String label, String value) {

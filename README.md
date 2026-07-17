@@ -10,10 +10,13 @@ A Flutter prototype for fuel delivery operations, connecting tanker truck driver
 lib/
 ├── main.dart                          # App entry point, theme persistence
 ├── core/                              # Shared infrastructure
+│   ├── constants/                     # App-wide constants
+│   │   └── delivery_conditions.dart   # Fuel expansion rates, temp thresholds, warnings
 │   ├── models/                        # Data classes
 │   │   ├── auth_user.dart             # AuthUser, user roles
 │   │   ├── fleet_tracking.dart        # FleetTruck, FleetStation
 │   │   ├── maintenance.dart           # MaintenanceRecord
+│   │   ├── order.dart                 # Order + OrderStatus enum
 │   │   ├── theft_alert.dart           # TheftAlert
 │   │   └── truck.dart                 # TruckModel, DeliveryModel
 │   ├── routes/                        # Navigation
@@ -21,10 +24,11 @@ lib/
 │   │   └── route_generator.dart       # onGenerateRoute handler
 │   ├── services/                      # Business logic & data access
 │   │   ├── authentication.dart        # AuthenticationService
-│   │   ├── deliveries.dart            # DeliveryService (3-way join)
+│   │   ├── deliveries.dart            # DeliveryService (3-way join + order→delivery)
 │   │   ├── json_reader.dart           # Reads mock JSON assets
 │   │   ├── maintenance_service.dart   # Maintenance record queries
 │   │   ├── navigation_simulator.dart  # Reusable ValueNotifier-based truck movement simulation (driver + supervisor fleet)
+│   │   ├── order_service.dart         # Order CRUD (in-memory, JSON-backed)
 │   │   └── osrm_routing.dart          # OSRM API client
 │   └── theme/
 │       └── app_theme.dart             # Light/dark Material 3, ThemeProvider
@@ -66,7 +70,8 @@ lib/
         ├── logout_dialog.dart         # Confirmation dialog
         ├── onboarding.dart            # Role-based onboarding overlay
         ├── role_badge.dart            # Color-coded marker with glow
-        └── sidebar.dart               # Collapsible sidebar with items prop
+        ├── sidebar.dart               # Collapsible sidebar with items prop
+        └── warning_card.dart          # Fuel expansion / temperature warning card
 
 assets/
 ├── images/
@@ -75,6 +80,7 @@ assets/
     ├── authentication.json            # 12 users (2 supervisors, 4 managers, 6 drivers)
     ├── deliveries.json                # 14 deliveries (truckId + stationId FK, supports inProgress/completed)
     ├── maintenance.json               # 14 records (assignedToId FK)
+    ├── orders.json                    # 4 orders (pendingApproval, approved, rejected)
     ├── stations.json                  # 11 stations (2 depots, 9 gas stations)
     ├── theft_alerts.json              # 7 alerts (vehicleId FK)
     └── vehicles.json                  # 9 trucks (fuelLevel, tankCapacity, driverId, dynamic status)
@@ -122,6 +128,7 @@ All data is read from `assets/mock_data/`:
 | `vehicles.json` | 9 trucks with `supervisorId`, `driverId`, `fuelLevel`, `tankCapacity`, status | `truckId` ← `deliveries.truckId`, `theft_alerts.vehicleId` |
 | `stations.json` | 11 stations in Batangas area, types: `depot`, `gasStation` | `stationId` ← `deliveries.stationId`, `stationType` differentiates depot vs gas station |
 | `deliveries.json` | 14 deliveries with `truckId`, `stationId`, `sourceStation`, product, quantity, status (`scheduled`/`inProgress`/`completed`) | FK: `truckId` → `vehicles.truckId`, `stationId`/`sourceStation` → `stations.stationId` |
+| `orders.json` | 4 orders following the Manager→Supervisor→Driver workflow | `depotId`/`stationId` → `stations.stationId`, `createdBy` → `authentication.userId` |
 | `maintenance.json` | 14 service records with `vehicleId`, `assignedToId` (driver/manager) | FK: `assignedToId` → `authentication.id` |
 | `theft_alerts.json` | 7 theft alerts with `vehicleId`, Batangas-area coordinates | FK: `vehicleId` → `vehicles.truckId` |
 
@@ -133,7 +140,7 @@ All data is read from `assets/mock_data/`:
 
 **Supply chain flow:**
 ```
-   Supervisor → Depot → Truck starts at depot → Gas Station delivery
+   Manager (creates order via Fleet Tracking) → Supervisor (approves on Dashboard) → Driver (accepts in Deliveries) → Depot → Gas Station delivery
 ```
 
 **Delivery relationships:**
@@ -154,6 +161,20 @@ No backend or real database is required.
 
 ---
 
+## Delivery Order Workflow
+
+The ordering system follows a 3-role approval pipeline using `orders.json` (status: `pendingApproval` → `approved` → `accepted` → `inProgress` → `completed`):
+
+1. **Manager (Create Order)** — Inside Fleet Tracking page, toggles "Create Order" mode via floating map button. Taps a depot (fuel source) then a gas station (delivery destination) on the map. Fills in fuel type, quantity, and scheduled date. A conditional warning from `DeliveryConditions` (fuel expansion risk at mocked 38°C) appears. On submit, the order is saved as `pendingApproval`.
+
+2. **Supervisor (Approve/Reject)** — On the Dashboard, a "Pending Order Approvals" card lists all orders awaiting review. Each tile shows details and the same temperature warning. The supervisor can approve (status → `approved`) or reject (status → `rejected` with reason).
+
+3. **Driver (Accept & Deliver)** — On the Deliveries page, an "Available Orders" section lists all approved orders. Tapping "Accept" changes the order status to `accepted` and calls `DeliveryService.createDeliveriesFromOrder()` which creates two `DeliveryModel` entries (depot stop + gas station stop) linked to the driver's truck. These entries merge into the existing delivery list and feed into the standard navigation flow (multi-select → Start Route → OSRM → stop-by-stop tracking).
+
+**Warning system:** `DeliveryConditions` constants define fuel expansion rates per °C and a high-temperature threshold (35°C). The current mocked ambient temperature is 38°C, which triggers an expansion risk warning (`+0.95L per 1000L per °C`). The `WarningCard` widget renders this with amber/red styling. When no warning is active, it shows a green "No active warnings" indicator.
+
+---
+
 ## Application Walkthrough
 
 ### Authentication
@@ -170,7 +191,11 @@ On first login, each role sees a role-specific introduction overlay with feature
 
 The driver shell uses a **bottom tab bar** with four tabs, preserving page state via `IndexedStack`. Routes are coordinated between the Deliveries and Map pages via shared `Set<String>` delivery IDs in the parent `DriverScreen`. A `_completedDeliveryIds` set is also shared — the map page adds delivery IDs as stops are reached during simulation, and the deliveries page uses this set to override static JSON status for runtime-accurate display.
 
-**Deliveries** — two-phase interface for planning and starting delivery routes with per-truck status tracking.
+**Deliveries** — three-section interface combining order acceptance, delivery planning, and per-truck status tracking.
+
+*Available Orders section* — At the top of the page, approved orders from the supervisor are listed as "Available Orders". Each tile shows the order ID, fuel type/quantity, and an "Accept" button. Accepting an order calls `DeliveryService.createDeliveriesFromOrder()` to create two `DeliveryModel` entries (depot fuel loading stop + gas station delivery stop) linked to the driver's truck. These entries merge into the driver's active delivery list and become available for the standard navigation flow. Accepted orders are removed from the available list.
+
+*View mode* — Shows four KPI cards (Total, Completed, En Route, Pending), truck info (speed, dynamic status), and a delivery list split into two sections: **Active Deliveries** (scheduled/in-progress) and a collapsible **Delivery History** (completed). Each tile shows a station-type-aware icon (depot icon for depots, gas pump icon for gas stations) and a runtime-aware status chip. The history section shows the first 3 items by default with a "Show all" / "Show less" toggle. Tapping a tile opens a detail bottom sheet with full info (source, type, dates, notes). A "Start Delivery" button in the bottom bar enters selection mode.
 
 *View mode* — Shows four KPI cards (Total, Completed, En Route, Pending), truck info (speed, dynamic status), and a delivery list split into two sections: **Active Deliveries** (scheduled/in-progress) and a collapsible **Delivery History** (completed). Each tile shows a station-type-aware icon (depot icon for depots, gas pump icon for gas stations) and a runtime-aware status chip. The history section shows the first 3 items by default with a "Show all" / "Show less" toggle. Tapping a tile opens a detail bottom sheet with full info (source, type, dates, notes). A "Start Delivery" button in the bottom bar enters selection mode.
 
@@ -204,10 +229,11 @@ The manager shell uses a **sidebar** with five pages, preserving page state via 
 
 **Fuel Monitoring** — real-time tank level monitoring with low-stock alerts and consumption tracking.
 
-**Fleet Tracking** — live fleet monitoring with automatic position simulation for en-route trucks:
+**Fleet Tracking** — live fleet monitoring with automatic position simulation for en-route trucks and **Create Order** functionality:
 - Interactive map showing color-coded truck markers with `MarkerLayer(rotate: true)` for screen-upright rendering. Moving trucks use green, gas station markers use orange, depot markers use blue.
 - En-route trucks automatically animated via `NavigationSimulator` along OSRM routes.
 - OSRM route polyline split into traveled (dimmed) and remaining (bright) segments.
+- **Create Order** mode toggled via a green `ActionButton` in the title row (beside "Notify Truck"). When active, the button turns red with "Cancel Order" label. In create-order mode, truck markers are hidden from the map to avoid accidental selection; only depot (blue) and gas station (orange) markers remain visible. Tap a depot then a gas station on the map to select fuel source and delivery destination. A side panel appears with fuel type dropdown, quantity field, and scheduled date picker. Shows a conditional fuel expansion warning (mocked 38°C ambient temperature). Submit creates an order with status `pendingApproval` in `orders.json`. The order then enters the 3-role approval workflow.
 
 **Maintenance** — full maintenance lifecycle management covering driver-submitted requests. KPI row (Total, Pending, In Progress, Overdue, Completed), cost analytics (Total Spent, Avg per Request, In Progress, Completed) with a cost-by-type bar chart, requests-by-type bar chart, status-distribution pie chart, and three-column record list (Pending Requests / Active / Service History). Pending requests show an "Approve/Reject" dialog (approve with scheduled date and note, or reject with required reason). The status workflow progresses through Pending → Scheduled → In Progress → Completed, with progress notes on each transition and cost recording on completion. Cancelled records display the rejection reason. Each record card shows type, vehicle, status/priority badges, dates, assigned user, cost, notes, and contextual action buttons based on current status.
 
@@ -224,6 +250,7 @@ The supervisor shell uses a **sidebar** with five pages, preserving page state v
 - Charts: Fuel Consumption Trend (line, Diesel/Gasoline), Fleet Status (bar), Fleet Composition (pie), Revenue vs Costs (area).
 - Recent alerts list (with "View All" navigation).
 - Maintenance overview (scheduled/in progress/overdue/completed counts).
+- **Pending Order Approvals** card — shows count of orders awaiting supervisor approval. Each order tile displays depot→station route, fuel type/quantity, scheduled date, and a conditional fuel expansion warning card. Approve/Reject buttons apply inline action — approve sets status to `approved`, reject shows a reason dialog and sets status to `rejected`. Uses shared `WarningCard` widget and `DeliveryConditions` constants for temperature-based warnings (mocked 38°C).
 
 **Fleet Tracking** — live fleet monitoring with automatic position simulation for en-route trucks:
 - Interactive map showing user location, color-coded truck markers, station markers, and context-aware side panel. Moving trucks use green (`0xFF16A34A`), idle amber, maintenance red, off-duty gray. Gas station markers use orange, depot markers use blue (`0xFF1565C0`) — matching the driver map's color scheme. All markers use `MarkerLayer(rotate: true)` for screen-upright rendering regardless of map orientation. Markers at identical positions stack naturally.

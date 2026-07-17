@@ -1,4 +1,5 @@
 export 'package:project_fuel/core/models/truck.dart';
+import 'package:project_fuel/core/models/order.dart';
 import 'package:project_fuel/core/models/truck.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 
@@ -7,6 +8,8 @@ class DeliveryService {
   static const _vehiclesPath = 'assets/mock_data/vehicles.json';
   static const _deliveriesPath = 'assets/mock_data/deliveries.json';
   static const _stationsPath = 'assets/mock_data/stations.json';
+
+  static final List<DeliveryModel> _orderDeliveries = [];
 
   DeliveryService({JsonReaderService? jsonReader}) : _jsonReader = jsonReader;
 
@@ -34,7 +37,7 @@ class DeliveryService {
       stationMap[station['stationId'] as String? ?? ''] = station;
     }
 
-    return rawDeliveries.whereType<Map<String, dynamic>>().map((d) {
+    final jsonDeliveries = rawDeliveries.whereType<Map<String, dynamic>>().map((d) {
       final stationId = d['stationId'] as String? ?? '';
       final sourceStationId = d['sourceStation'] as String? ?? '';
       final station = stationMap[stationId];
@@ -66,6 +69,8 @@ class DeliveryService {
         sourceStationType: sourceStation?['type'] as String? ?? '',
       );
     }).toList();
+
+    return [...jsonDeliveries, ..._orderDeliveries];
   }
 
   Future<List<DeliveryModel>> getDeliveriesForDriver(int driverId) async {
@@ -80,5 +85,62 @@ class DeliveryService {
   Future<TruckModel?> getTruckForDriver(int driverId) async {
     final trucks = await getAllTruckData();
     return trucks.where((t) => t.driverId == driverId).firstOrNull;
+  }
+
+  Future<List<DeliveryModel>> createDeliveriesFromOrder(
+    Order order,
+    String truckId,
+  ) async {
+    final rawStations = await _readJson(_stationsPath);
+    final stationMap = <String, Map<String, dynamic>>{};
+    for (final s in rawStations) {
+      final station = s as Map<String, dynamic>;
+      stationMap[station['stationId'] as String? ?? ''] = station;
+    }
+
+    final depot = stationMap[order.depotId];
+    final station = stationMap[order.stationId];
+
+    final baseId = 'ORD-${order.orderId.replaceAll('ORD-', '')}';
+    final depotDelivery = DeliveryModel(
+      id: '$baseId-D',
+      truckId: truckId,
+      stationId: order.depotId,
+      product: order.fuelType,
+      quantity: order.quantity.round(),
+      unit: 'L',
+      status: 'scheduled',
+      scheduledDate: order.scheduledDate,
+      sourceStationId: '',
+      stationName: depot?['name'] as String? ?? order.depotId,
+      stationLat: (depot?['lat'] as num? ?? 0.0).toDouble(),
+      stationLng: (depot?['lng'] as num? ?? 0.0).toDouble(),
+      stationType: 'depot',
+      notes: 'Fuel loading stop',
+    );
+
+    final stationDelivery = DeliveryModel(
+      id: '$baseId-S',
+      truckId: truckId,
+      stationId: order.stationId,
+      product: order.fuelType,
+      quantity: order.quantity.round(),
+      unit: 'L',
+      status: 'scheduled',
+      scheduledDate: order.scheduledDate,
+      sourceStationId: order.depotId,
+      stationName: station?['name'] as String? ?? order.stationId,
+      stationLat: (station?['lat'] as num? ?? 0.0).toDouble(),
+      stationLng: (station?['lng'] as num? ?? 0.0).toDouble(),
+      stationType: 'gasStation',
+      sourceStationName: depot?['name'] as String? ?? '',
+      sourceStationLat: (depot?['lat'] as num? ?? 0.0).toDouble(),
+      sourceStationLng: (depot?['lng'] as num? ?? 0.0).toDouble(),
+      sourceStationType: 'depot',
+      notes: 'Customer delivery',
+    );
+
+    _orderDeliveries.addAll([depotDelivery, stationDelivery]);
+    return [depotDelivery, stationDelivery];
   }
 }

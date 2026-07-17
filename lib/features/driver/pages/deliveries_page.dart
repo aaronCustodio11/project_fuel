@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:project_fuel/core/models/order.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/deliveries.dart';
+import 'package:project_fuel/core/services/order_service.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 
 class DriverDeliveriesPage extends StatefulWidget {
@@ -32,6 +34,8 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
   final Set<String> _selectedDeliveryIds = {};
   bool _isSelecting = false;
   bool _showHistory = false;
+  List<Order> _availableOrders = [];
+  final _orderService = OrderService();
 
   @override
   void initState() {
@@ -45,9 +49,11 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
       final results = await Future.wait([
         _deliveryService.getTruckForDriver(user.userId),
         _deliveryService.getDeliveriesForDriver(user.userId),
+        _orderService.getOrdersByStatus(OrderStatus.approved),
       ]);
       _truck = results[0] as TruckModel?;
       _deliveries = results[1] as List<DeliveryModel>;
+      _availableOrders = results[2] as List<Order>;
     }
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -168,6 +174,10 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
         FleetSpacing.xl * 3,
       ),
       children: [
+        if (_availableOrders.isNotEmpty) ...[
+          _buildAvailableOrdersSection(theme),
+          const SizedBox(height: FleetSpacing.lg),
+        ],
         Text(
           'Delivery Overview',
           style: theme.textTheme.titleMedium?.copyWith(
@@ -251,6 +261,134 @@ class _DriverDeliveriesPageState extends State<DriverDeliveriesPage> {
           ),
       ],
     );
+  }
+
+  Widget _buildAvailableOrdersSection(ThemeData theme) {
+    final scheme = theme.colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.receipt_long_outlined, size: 18, color: AppTheme.accentBlue),
+            const SizedBox(width: FleetSpacing.sm),
+            Text(
+              'Available Orders (${_availableOrders.length})',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: FleetSpacing.sm),
+        Text(
+          'Approved orders awaiting your acceptance',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: FleetSpacing.sm),
+        ..._availableOrders.map((order) => Padding(
+          padding: const EdgeInsets.only(bottom: FleetSpacing.sm),
+          child: _buildAvailableOrderTile(theme, order),
+        )),
+      ],
+    );
+  }
+
+  Widget _buildAvailableOrderTile(ThemeData theme, Order order) {
+    final scheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(FleetSpacing.md),
+      decoration: BoxDecoration(
+        color: AppTheme.accentBlue.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(FleetRadius.md),
+        border: Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentBlue.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(Icons.receipt_outlined, size: 16, color: AppTheme.accentBlue),
+              ),
+              const SizedBox(width: FleetSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(order.orderId, style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: scheme.primary,
+                    )),
+                    Text(
+                      '${order.quantity.round()}L ${order.fuelType}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 36,
+                child: FilledButton.icon(
+                  onPressed: () => _acceptOrder(order),
+                  icon: const Icon(Icons.check_circle_outline, size: 16),
+                  label: const Text('Accept'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _acceptOrder(Order order) async {
+    final user = await _authService.getSavedUser();
+    if (user == null || _truck == null || !mounted) return;
+
+    final updated = order.copyWith(
+      status: OrderStatus.accepted,
+      acceptedBy: user.userId,
+      acceptedAt: DateTime.now(),
+    );
+
+    await _orderService.updateOrder(updated);
+
+    await _deliveryService.createDeliveriesFromOrder(
+      updated,
+      _truck!.truckId,
+    );
+
+    if (!mounted) return;
+
+    if (!mounted) return;
+    final deliveries = await _deliveryService.getDeliveriesForDriver(user.userId);
+    final available = await _orderService.getOrdersByStatus(OrderStatus.approved);
+
+    if (!mounted) return;
+    setState(() {
+      _deliveries = deliveries;
+      _availableOrders = available;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('${order.orderId} accepted — added to your deliveries'),
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   Widget _buildHistorySection(ThemeData theme, List<DeliveryModel> history) {

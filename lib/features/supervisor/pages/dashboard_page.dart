@@ -1,14 +1,18 @@
 import 'package:chartify/chartify.dart';
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:project_fuel/core/constants/delivery_conditions.dart';
 import 'package:project_fuel/core/models/fleet_tracking.dart';
 import 'package:project_fuel/core/models/maintenance.dart';
+import 'package:project_fuel/core/models/order.dart';
 import 'package:project_fuel/core/routes/app_routes.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/services/maintenance_service.dart';
+import 'package:project_fuel/core/services/order_service.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:project_fuel/shared/widgets/action_button.dart';
+import 'package:project_fuel/shared/widgets/warning_card.dart';
 
 class SupervisorDashboard extends StatefulWidget {
   final void Function(int index)? onNavigate;
@@ -30,6 +34,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard>
   List<MaintenanceRecord> _maintenanceRecords = [];
   List<Map<String, dynamic>> _theftAlerts = [];
   List<Map<String, dynamic>> _authUsers = [];
+  List<Order> _orders = [];
+  final _orderService = OrderService();
 
   late final AnimationController _gradientController;
   late final Animation<double> _gradientAnim;
@@ -48,6 +54,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard>
     _loadData();
   }
 
+  final Map<String, String> _stationNames = {};
+
   Future<void> _loadData() async {
     final results = await Future.wait([
       _authService.getSavedUser(),
@@ -60,10 +68,18 @@ class _SupervisorDashboardState extends State<SupervisorDashboard>
 
     final user = results[0] as AuthUser?;
     final vehicles = results[1] as List<dynamic>;
+    final rawStations = results[2] as List<dynamic>;
     final maintenance = results[3] as List<MaintenanceRecord>;
     final theftAlerts = results[4] as List<dynamic>;
     final authUsers = results[5] as List<dynamic>;
     final supervisorId = user?.supervisorId;
+
+    for (final s in rawStations) {
+      final st = s as Map<String, dynamic>;
+      _stationNames[st['stationId'] as String? ?? ''] = st['name'] as String? ?? '';
+    }
+
+    final orders = await _orderService.getOrdersByStatus(OrderStatus.pendingApproval);
 
     if (mounted) {
       setState(() {
@@ -76,6 +92,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard>
         _maintenanceRecords = maintenance;
         _theftAlerts = theftAlerts.whereType<Map<String, dynamic>>().toList();
         _authUsers = authUsers.cast<Map<String, dynamic>>();
+        _orders = orders;
         _isLoading = false;
       });
     }
@@ -154,6 +171,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard>
                   _buildFleetKpiRow(context),
                   const SizedBox(height: FleetSpacing.xl),
                   _buildMonitoringKpiRow(context),
+                  const SizedBox(height: FleetSpacing.xl),
+                  _buildPendingOrdersCard(context),
                   const SizedBox(height: FleetSpacing.xl),
                   SizedBox(height: 340, child: _buildChartsRow1(context)),
                   const SizedBox(height: FleetSpacing.xl),
@@ -388,6 +407,237 @@ class _SupervisorDashboardState extends State<SupervisorDashboard>
         )),
       ],
     );
+  }
+
+  Widget _buildPendingOrdersCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(FleetSpacing.lg),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(FleetRadius.md),
+        border: Border.all(color: scheme.outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.receipt_long_outlined, size: 20, color: scheme.primary),
+                  const SizedBox(width: FleetSpacing.sm),
+                  Text('Pending Order Approvals', style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  )),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: FleetSpacing.sm, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.warningAmber.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(FleetRadius.pill),
+                ),
+                child: Text(
+                  '${_orders.length}',
+                  style: TextStyle(
+                    color: AppTheme.warningAmber,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_orders.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: FleetSpacing.lg),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle_outline, size: 18, color: AppTheme.successGreen),
+                  const SizedBox(width: FleetSpacing.sm),
+                  Text('No pending order approvals', style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  )),
+                ],
+              ),
+            )
+          else
+            ..._orders.map((order) => Padding(
+              padding: const EdgeInsets.only(top: FleetSpacing.md),
+              child: _buildOrderApprovalTile(context, order),
+            )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderApprovalTile(BuildContext context, Order order) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final depotName = _stationNames[order.depotId] ?? order.depotId;
+    final stationName = _stationNames[order.stationId] ?? order.stationId;
+    final warning = DeliveryConditions.getWarning(
+      DeliveryConditions.mockAmbientTemp,
+      order.fuelType,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(FleetSpacing.md),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(FleetRadius.sm),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppTheme.warningAmber.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(Icons.receipt_outlined, size: 16, color: AppTheme.warningAmber),
+              ),
+              const SizedBox(width: FleetSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(order.orderId, style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: scheme.primary,
+                    )),
+                    const SizedBox(height: 2),
+                    Text('$depotName → $stationName', style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    )),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: FleetSpacing.sm),
+          Row(
+            children: [
+              _orderChip(theme, '${order.quantity.round()}L ${order.fuelType}', AppTheme.accentBlue),
+              const SizedBox(width: FleetSpacing.xs),
+              if (order.scheduledDate != null)
+                _orderChip(theme,
+                  '${order.scheduledDate!.month}/${order.scheduledDate!.day}',
+                  scheme.onSurfaceVariant,
+                ),
+            ],
+          ),
+          if (warning != null) ...[
+            const SizedBox(height: FleetSpacing.sm),
+            WarningCard(message: warning, isActive: true),
+          ] else ...[
+            const SizedBox(height: FleetSpacing.sm),
+            WarningCard(),
+          ],
+          const SizedBox(height: FleetSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _handleOrderApproval(order, true),
+                  icon: const Icon(Icons.check_circle_outline, size: 16),
+                  label: const Text('Approve'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.successGreen,
+                    side: const BorderSide(color: AppTheme.successGreen),
+                  ),
+                ),
+              ),
+              const SizedBox(width: FleetSpacing.sm),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _handleOrderApproval(order, false),
+                  icon: const Icon(Icons.cancel_outlined, size: 16),
+                  label: const Text('Reject'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.dangerRed,
+                    side: const BorderSide(color: AppTheme.dangerRed),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _orderChip(ThemeData theme, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+    );
+  }
+
+  Future<void> _handleOrderApproval(Order order, bool approve) async {
+    final user = _currentUser;
+    if (user == null) return;
+
+    String? rejectionReason;
+    if (!approve) {
+      final ctrl = TextEditingController();
+      final reason = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(FleetRadius.md)),
+          title: const Text('Rejection Reason'),
+          content: TextField(
+            controller: ctrl,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              hintText: 'Explain why this order was rejected...',
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            FilledButton(onPressed: () {
+              if (ctrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx, ctrl.text.trim());
+            }, child: const Text('Reject Order')),
+          ],
+        ),
+      );
+      if (reason == null || !mounted) return;
+      rejectionReason = reason;
+    }
+
+    final updated = order.copyWith(
+      status: approve ? OrderStatus.approved : OrderStatus.rejected,
+      approvedBy: user.userId,
+      approvedAt: DateTime.now(),
+      rejectionReason: rejectionReason,
+    );
+
+    await _orderService.updateOrder(updated);
+
+    if (!mounted) return;
+    setState(() {
+      _orders.removeWhere((o) => o.orderId == order.orderId);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(approve
+          ? '${order.orderId} approved'
+          : '${order.orderId} rejected'),
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   Widget _buildChartsRow1(BuildContext context) {
