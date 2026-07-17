@@ -1019,7 +1019,7 @@ class _SupervisorFleetTrackingState extends State<SupervisorFleetTracking> {
           ),
           const SizedBox(height: FleetSpacing.md),
           SizedBox(
-            height: 200,
+            height: 380,
             child: _ChartCard(
               title: 'Fuel Levels by Truck',
               subtitle: 'Current fuel percentage',
@@ -1046,7 +1046,11 @@ class _SupervisorFleetTrackingState extends State<SupervisorFleetTracking> {
             ),
           ],
           xAxis: BarXAxisConfig(categories: labels),
-          yAxis: const BarYAxisConfig(min: 0, max: 100),
+          yAxis: BarYAxisConfig(
+            min: 0,
+            max: 100,
+            labelFormatter: (value) => value.toInt().toString(),
+          ),
           grouping: BarGrouping.grouped,
           direction: BarDirection.vertical,
         ),

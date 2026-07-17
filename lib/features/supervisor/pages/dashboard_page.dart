@@ -424,7 +424,11 @@ class _SupervisorDashboardState extends State<SupervisorDashboard>
                   xAxis: const BarXAxisConfig(
                     categories: ['Moving', 'Idle', 'Maintenance', 'Off Duty'],
                   ),
-                  yAxis: const BarYAxisConfig(min: 0, tickCount: 4),
+                  yAxis: BarYAxisConfig(
+                    min: 0,
+                    tickCount: 1,
+                    labelFormatter: (value) => value.toInt().toString(),
+                  ),
                   grouping: BarGrouping.grouped,
                   direction: BarDirection.vertical,
                 ),
