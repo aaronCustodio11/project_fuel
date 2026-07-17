@@ -1153,7 +1153,7 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
           ),
           const SizedBox(height: FleetSpacing.md),
           SizedBox(
-            height: 200,
+            height: 380,
             child: _ChartCard(
               title: 'Fuel Levels by Truck',
               subtitle: 'Current fuel percentage',
@@ -1169,6 +1169,10 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
     final labels = _trucks.map((t) => t.name.replaceAll('Truck ', '')).toList();
     final values = _trucks.map((t) => (t.fuelLevel ?? 0) * 100).toList();
 
+    final dataMax = values.reduce(math.max);
+    final padding = dataMax * 0.15;
+    final yMax = (((dataMax + padding) / 10).ceil() * 10).toDouble();
+
     return RepaintBoundary(
       child: BarChart(
         data: BarChartData(
@@ -1180,7 +1184,11 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
             ),
           ],
           xAxis: BarXAxisConfig(categories: labels),
-          yAxis: const BarYAxisConfig(min: 0, max: 100),
+          yAxis: BarYAxisConfig(
+            min: 0,
+            max: yMax,
+            labelFormatter: (value) => value.toInt().toString(),
+          ),
           grouping: BarGrouping.grouped,
           direction: BarDirection.vertical,
         ),

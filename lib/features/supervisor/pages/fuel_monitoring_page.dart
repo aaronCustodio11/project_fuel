@@ -122,7 +122,7 @@ class _SupervisorFuelMonitoringState extends State<SupervisorFuelMonitoring> {
           ),
           const SizedBox(height: FleetSpacing.lg),
           SizedBox(
-            height: 280,
+            height: 340,
             child: Row(
               children: [
                 Expanded(

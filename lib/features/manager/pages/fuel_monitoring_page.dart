@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:chartify/chartify.dart';
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -118,7 +120,7 @@ class _ManagerFuelMonitoringState extends State<ManagerFuelMonitoring> {
           ),
           const SizedBox(height: FleetSpacing.lg),
           SizedBox(
-            height: 280,
+            height: 380,
             child: Row(
               children: [
                 Expanded(
@@ -167,6 +169,10 @@ class _ManagerFuelMonitoringState extends State<ManagerFuelMonitoring> {
     }).toList();
     final values = _stations.map((s) => (s.currentStock / s.capacity) * 100).toList();
 
+    final dataMax = values.reduce(math.max);
+    final padding = dataMax * 0.15;
+    final yMax = (((dataMax + padding) / 10).ceil() * 10).toDouble();
+
     return RepaintBoundary(
       child: BarChart(
         data: BarChartData(
@@ -183,7 +189,11 @@ class _ManagerFuelMonitoringState extends State<ManagerFuelMonitoring> {
             ),
           ],
           xAxis: BarXAxisConfig(categories: labels),
-          yAxis: const BarYAxisConfig(min: 0, max: 100),
+          yAxis: BarYAxisConfig(
+            min: 0,
+            max: yMax,
+            labelFormatter: (value) => value.toInt().toString(),
+          ),
           grouping: BarGrouping.grouped,
           direction: BarDirection.vertical,
         ),
