@@ -42,7 +42,7 @@ class _SupervisorFleetTrackingState extends State<SupervisorFleetTracking> {
 
   final Map<String, NavigationSimulator> _simulators = {};
   final Map<String, LatLng> _livePositions = {};
-
+  bool _showCharts = true;
 
   @override
   void initState() {
@@ -337,6 +337,13 @@ class _SupervisorFleetTrackingState extends State<SupervisorFleetTracking> {
                 Text('Fleet Tracking', style: theme.textTheme.headlineLarge),
                 Row(
                   children: [
+                    ActionButton(
+                      icon: _showCharts ? Icons.visibility : Icons.visibility_off,
+                      label: _showCharts ? 'Hide Charts' : 'Show Charts',
+                      color: scheme.primary,
+                      onTap: () => setState(() => _showCharts = !_showCharts),
+                    ),
+                    const SizedBox(width: FleetSpacing.sm),
                     ActionButton(
                       icon: Icons.add_location_outlined,
                       label: 'Add Location',
@@ -1018,14 +1025,15 @@ class _SupervisorFleetTrackingState extends State<SupervisorFleetTracking> {
             ],
           ),
           const SizedBox(height: FleetSpacing.md),
-          SizedBox(
-            height: 380,
-            child: _ChartCard(
-              title: 'Fuel Levels by Truck',
-              subtitle: 'Current fuel percentage',
-              child: _buildFuelChart(theme),
+          if (_showCharts)
+            SizedBox(
+              height: 380,
+              child: _ChartCard(
+                title: 'Fuel Levels by Truck',
+                subtitle: 'Current fuel percentage',
+                child: _buildFuelChart(theme),
+              ),
             ),
-          ),
         ],
       ),
     );

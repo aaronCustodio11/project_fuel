@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
+import 'package:project_fuel/shared/widgets/action_button.dart';
 
 enum TheftAlertType { fuelTheft, unauthorizedAccess, gpsTampering, routeDeviation }
 
@@ -48,6 +49,7 @@ class SupervisorTheftDetection extends StatefulWidget {
 class _SupervisorTheftDetectionState extends State<SupervisorTheftDetection> {
   List<TheftAlert> _alerts = [];
   bool _isLoading = true;
+  bool _showCharts = true;
 
   @override
   void initState() {
@@ -223,7 +225,18 @@ class _SupervisorTheftDetectionState extends State<SupervisorTheftDetection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Theft Detection', style: theme.textTheme.headlineLarge),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Theft Detection', style: theme.textTheme.headlineLarge),
+              ActionButton(
+                icon: _showCharts ? Icons.visibility : Icons.visibility_off,
+                label: _showCharts ? 'Hide Charts' : 'Show Charts',
+                color: theme.colorScheme.primary,
+                onTap: () => setState(() => _showCharts = !_showCharts),
+              ),
+            ],
+          ),
           const SizedBox(height: FleetSpacing.md),
           Row(
             children: [
@@ -253,30 +266,31 @@ class _SupervisorTheftDetectionState extends State<SupervisorTheftDetection> {
             ],
           ),
           const SizedBox(height: FleetSpacing.md),
-          SizedBox(
-            height: 300,
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: _ChartCard(
-                    title: 'Alerts by Type',
-                    subtitle: '$total total alerts',
-                    child: _buildTypeChart(),
+          if (_showCharts)
+            SizedBox(
+              height: 300,
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: _ChartCard(
+                      title: 'Alerts by Type',
+                      subtitle: '$total total alerts',
+                      child: _buildTypeChart(),
+                    ),
                   ),
-                ),
-                const SizedBox(width: FleetSpacing.md),
-                Expanded(
-                  flex: 2,
-                  child: _ChartCard(
-                    title: 'Severity Distribution',
-                    subtitle: 'Current breakdown',
-                    child: _buildSeverityChart(theme),
+                  const SizedBox(width: FleetSpacing.md),
+                  Expanded(
+                    flex: 2,
+                    child: _ChartCard(
+                      title: 'Severity Distribution',
+                      subtitle: 'Current breakdown',
+                      child: _buildSeverityChart(theme),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           const SizedBox(height: FleetSpacing.md),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,

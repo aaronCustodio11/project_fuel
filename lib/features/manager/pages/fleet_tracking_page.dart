@@ -52,6 +52,7 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
   final _orderQuantityCtrl = TextEditingController();
   DateTime _orderScheduledDate = DateTime.now().add(const Duration(days: 1));
   final _orderService = OrderService();
+  bool _showCharts = true;
 
   @override
   void initState() {
@@ -345,6 +346,13 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    ActionButton(
+                      icon: _showCharts ? Icons.visibility : Icons.visibility_off,
+                      label: _showCharts ? 'Hide Charts' : 'Show Charts',
+                      color: theme.colorScheme.primary,
+                      onTap: () => setState(() => _showCharts = !_showCharts),
+                    ),
+                    const SizedBox(width: FleetSpacing.sm),
                     FilledButton.icon(
                       style: FilledButton.styleFrom(
                         backgroundColor: _isCreateOrderMode ? AppTheme.dangerRed : AppTheme.successGreen,
@@ -1152,14 +1160,15 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
             ],
           ),
           const SizedBox(height: FleetSpacing.md),
-          SizedBox(
-            height: 380,
-            child: _ChartCard(
-              title: 'Fuel Levels by Truck',
-              subtitle: 'Current fuel percentage',
-              child: _buildFuelChart(theme),
+          if (_showCharts)
+            SizedBox(
+              height: 380,
+              child: _ChartCard(
+                title: 'Fuel Levels by Truck',
+                subtitle: 'Current fuel percentage',
+                child: _buildFuelChart(theme),
+              ),
             ),
-          ),
         ],
       ),
     );

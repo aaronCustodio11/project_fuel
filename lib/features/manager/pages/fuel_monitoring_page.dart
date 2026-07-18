@@ -6,6 +6,7 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
+import 'package:project_fuel/shared/widgets/action_button.dart';
 
 class ManagerFuelMonitoring extends StatefulWidget {
   const ManagerFuelMonitoring({super.key});
@@ -19,6 +20,7 @@ class _ManagerFuelMonitoringState extends State<ManagerFuelMonitoring> {
 
   List<_StationStock> _stations = [];
   bool _isLoading = true;
+  bool _showCharts = true;
 
   @override
   void initState() {
@@ -86,10 +88,26 @@ class _ManagerFuelMonitoringState extends State<ManagerFuelMonitoring> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Fuel Monitoring', style: theme.textTheme.headlineLarge),
-          const SizedBox(height: 4),
-          Text('${_stations.length} station${_stations.length == 1 ? '' : 's'} assigned to you',
-              style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Fuel Monitoring', style: theme.textTheme.headlineLarge),
+                  const SizedBox(height: 4),
+                  Text('${_stations.length} station${_stations.length == 1 ? '' : 's'} assigned to you',
+                      style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                ],
+              ),
+              ActionButton(
+                icon: _showCharts ? Icons.visibility : Icons.visibility_off,
+                label: _showCharts ? 'Hide Charts' : 'Show Charts',
+                color: theme.colorScheme.primary,
+                onTap: () => setState(() => _showCharts = !_showCharts),
+              ),
+            ],
+          ),
           const SizedBox(height: FleetSpacing.lg),
           Row(
             children: [
@@ -119,30 +137,31 @@ class _ManagerFuelMonitoringState extends State<ManagerFuelMonitoring> {
             ],
           ),
           const SizedBox(height: FleetSpacing.lg),
-          SizedBox(
-            height: 380,
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: _ChartCard(
-                    title: 'Stock Levels by Station',
-                    subtitle: 'Current inventory vs capacity',
-                    child: _buildStockChart(),
+          if (_showCharts)
+            SizedBox(
+              height: 380,
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: _ChartCard(
+                      title: 'Stock Levels by Station',
+                      subtitle: 'Current inventory vs capacity',
+                      child: _buildStockChart(),
+                    ),
                   ),
-                ),
-                const SizedBox(width: FleetSpacing.md),
-                Expanded(
-                  flex: 2,
-                  child: _ChartCard(
-                    title: 'Capacity Distribution',
-                    subtitle: 'Share of total capacity',
-                    child: _buildCapacityChart(),
+                  const SizedBox(width: FleetSpacing.md),
+                  Expanded(
+                    flex: 2,
+                    child: _ChartCard(
+                      title: 'Capacity Distribution',
+                      subtitle: 'Share of total capacity',
+                      child: _buildCapacityChart(),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           const SizedBox(height: FleetSpacing.lg),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

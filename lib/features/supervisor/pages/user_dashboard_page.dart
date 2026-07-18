@@ -5,6 +5,8 @@ import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:project_fuel/shared/widgets/action_button.dart';
+import 'package:project_fuel/features/supervisor/pages/manager_overview_page.dart';
+import 'package:project_fuel/features/supervisor/pages/driver_overview_page.dart';
 
 String? _coerceStringValue(Object? value) {
   if (value == null) return null;
@@ -137,6 +139,8 @@ class UserDashboard extends StatefulWidget {
   State<UserDashboard> createState() => _UserDashboardState();
 }
 
+enum _DashboardView { main, managerOverview, driverOverview }
+
 class _UserDashboardState extends State<UserDashboard> {
   final JsonReaderService _jsonReader = JsonReaderService();
   static const String _dataPath = 'assets/mock_data/authentication.json';
@@ -149,12 +153,18 @@ class _UserDashboardState extends State<UserDashboard> {
   ];
 
   List<ManagedUser> _users = [];
+  List<Map<String, dynamic>> _rawUsers = [];
   bool _isLoading = true;
   String? _errorMessage;
 
   String _searchQuery = '';
   String _roleFilter = 'All';
   final TextEditingController _searchCtrl = TextEditingController();
+
+  _DashboardView _currentView = _DashboardView.main;
+  List<Map<String, dynamic>> _managersForOverview = [];
+  List<Map<String, dynamic>> _driversForOverview = [];
+  bool _showCharts = true;
 
   @override
   void initState() {
@@ -187,8 +197,12 @@ class _UserDashboardState extends State<UserDashboard> {
         currentRole: currentUser?.role,
       );
 
+      final allRaw = raw.whereType<Map<String, dynamic>>().toList();
+      final visibleIds = visibleUsers.map((u) => u.userId).toSet();
+
       setState(() {
         _users = visibleUsers;
+        _rawUsers = allRaw.where((r) => visibleIds.contains(r['userId'].toString())).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -305,16 +319,30 @@ class _UserDashboardState extends State<UserDashboard> {
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLow,
       body: SafeArea(
-        child: _buildDashboardContent(context),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: _currentView == _DashboardView.managerOverview
+              ? ManagerOverviewPage(
+                  key: const ValueKey('managerOverview'),
+                  rawManagers: _managersForOverview,
+                  onBack: () => setState(() => _currentView = _DashboardView.main),
+                )
+              : _currentView == _DashboardView.driverOverview
+                  ? DriverOverviewPage(
+                      key: const ValueKey('driverOverview'),
+                      rawDrivers: _driversForOverview,
+                      onBack: () => setState(() => _currentView = _DashboardView.main),
+                    )
+                  : _buildDashboardContent(context),
+        ),
       ),
     );
   }
 
   Widget _buildDashboardContent(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(FleetSpacing.xl),
-      child: SingleChildScrollView(
-        child: Column(
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -324,11 +352,23 @@ class _UserDashboardState extends State<UserDashboard> {
                   'User Management',
                   style: Theme.of(context).textTheme.headlineLarge,
                 ),
-                ActionButton(
-                  icon: Icons.person_add_alt_1,
-                  label: 'Add User',
-                  color: Theme.of(context).colorScheme.primary,
-                  onTap: _openAddDialog,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ActionButton(
+                      icon: _showCharts ? Icons.visibility : Icons.visibility_off,
+                      label: _showCharts ? 'Hide Charts' : 'Show Charts',
+                      color: Theme.of(context).colorScheme.primary,
+                      onTap: () => setState(() => _showCharts = !_showCharts),
+                    ),
+                    const SizedBox(width: FleetSpacing.sm),
+                    ActionButton(
+                      icon: Icons.person_add_alt_1,
+                      label: 'Add User',
+                      color: Theme.of(context).colorScheme.primary,
+                      onTap: _openAddDialog,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -336,7 +376,7 @@ class _UserDashboardState extends State<UserDashboard> {
             if (!_isLoading && _errorMessage == null) _buildAnalytics(context),
             if (!_isLoading && _errorMessage == null)
               const SizedBox(height: FleetSpacing.xl),
-            if (!_isLoading && _errorMessage == null) _buildChartRow(context),
+            if (!_isLoading && _errorMessage == null && _showCharts) _buildChartRow(context),
             if (!_isLoading && _errorMessage == null)
               const SizedBox(height: FleetSpacing.xl),
             if (!_isLoading && _errorMessage == null) _buildToolbar(context),
@@ -346,7 +386,6 @@ class _UserDashboardState extends State<UserDashboard> {
             const SizedBox(height: FleetSpacing.xl),
           ],
         ),
-      ),
     );
   }
 
@@ -372,14 +411,10 @@ class _UserDashboardState extends State<UserDashboard> {
             accentColor: AppTheme.accentBlue,
             overviewLabel: 'Overview',
             onOverviewTap: () {
-              final managers = _users.where((u) => u.role == 'Manager').toList();
-              Navigator.push(context, MaterialPageRoute(
-                builder: (_) => RoleOverviewPage(
-                  title: 'Managers Overview',
-                  users: managers,
-                  accentColor: AppTheme.accentBlue,
-                ),
-              ));
+              setState(() {
+                _managersForOverview = _rawUsers.where((u) => u['role'] == 'Manager').toList();
+                _currentView = _DashboardView.managerOverview;
+              });
             },
           ),
         ),
@@ -392,14 +427,10 @@ class _UserDashboardState extends State<UserDashboard> {
             accentColor: AppTheme.warningAmber,
             overviewLabel: 'Overview',
             onOverviewTap: () {
-              final drivers = _users.where((u) => u.role == 'Driver').toList();
-              Navigator.push(context, MaterialPageRoute(
-                builder: (_) => RoleOverviewPage(
-                  title: 'Drivers Overview',
-                  users: drivers,
-                  accentColor: AppTheme.warningAmber,
-                ),
-              ));
+              setState(() {
+                _driversForOverview = _rawUsers.where((u) => u['role'] == 'Driver').toList();
+                _currentView = _DashboardView.driverOverview;
+              });
             },
           ),
         ),

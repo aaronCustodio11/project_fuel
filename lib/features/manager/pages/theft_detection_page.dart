@@ -53,6 +53,7 @@ class ManagerTheftDetection extends StatefulWidget {
 class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
   List<TheftAlert> _alerts = [];
   bool _isLoading = true;
+  bool _showCharts = true;
 
   final _nextId = ValueNotifier<int>(8);
 
@@ -501,11 +502,23 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
                   ],
                 ),
               ),
-              ActionButton(
-                icon: Icons.add_alert_rounded,
-                label: 'Report Theft',
-                color: AppTheme.dangerRed,
-                onTap: _showReportTheftDialog,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ActionButton(
+                    icon: _showCharts ? Icons.visibility : Icons.visibility_off,
+                    label: _showCharts ? 'Hide Charts' : 'Show Charts',
+                    color: theme.colorScheme.primary,
+                    onTap: () => setState(() => _showCharts = !_showCharts),
+                  ),
+                  const SizedBox(width: FleetSpacing.sm),
+                  ActionButton(
+                    icon: Icons.add_alert_rounded,
+                    label: 'Report Theft',
+                    color: AppTheme.dangerRed,
+                    onTap: _showReportTheftDialog,
+                  ),
+                ],
               ),
             ],
           ),
@@ -538,39 +551,40 @@ class _ManagerTheftDetectionState extends State<ManagerTheftDetection> {
             ],
           ),
           const SizedBox(height: FleetSpacing.lg),
-          SizedBox(
-            height: 280,
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: _ChartCard(
-                    title: 'Reports by Type',
-                    subtitle: '$total total reports',
-                    child: _buildTypeChart(),
+          if (_showCharts)
+            SizedBox(
+              height: 280,
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: _ChartCard(
+                      title: 'Reports by Type',
+                      subtitle: '$total total reports',
+                      child: _buildTypeChart(),
+                    ),
                   ),
-                ),
-                const SizedBox(width: FleetSpacing.md),
-                Expanded(
-                  flex: 2,
-                  child: _ChartCard(
-                    title: 'Severity Distribution',
-                    subtitle: 'Breakdown of reports',
-                    child: _buildSeverityChart(),
+                  const SizedBox(width: FleetSpacing.md),
+                  Expanded(
+                    flex: 2,
+                    child: _ChartCard(
+                      title: 'Severity Distribution',
+                      subtitle: 'Breakdown of reports',
+                      child: _buildSeverityChart(),
+                    ),
                   ),
-                ),
-                const SizedBox(width: FleetSpacing.md),
-                Expanded(
-                  flex: 2,
-                  child: _ChartCard(
-                    title: 'Status Overview',
-                    subtitle: 'Supervisor resolution progress',
-                    child: _buildStatusChart(),
+                  const SizedBox(width: FleetSpacing.md),
+                  Expanded(
+                    flex: 2,
+                    child: _ChartCard(
+                      title: 'Status Overview',
+                      subtitle: 'Supervisor resolution progress',
+                      child: _buildStatusChart(),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           const SizedBox(height: FleetSpacing.lg),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
