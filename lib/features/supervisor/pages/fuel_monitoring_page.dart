@@ -6,6 +6,7 @@ import 'package:project_fuel/core/models/fleet_tracking.dart';
 import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
+import 'package:project_fuel/shared/widgets/action_button.dart';
 
 class SupervisorFuelMonitoring extends StatefulWidget {
   const SupervisorFuelMonitoring({super.key});
@@ -20,6 +21,7 @@ class _SupervisorFuelMonitoringState extends State<SupervisorFuelMonitoring> {
   List<FleetTruck> _trucks = [];
   List<_FuelStation> _stations = [];
   bool _isLoading = true;
+  bool _showCharts = true;
 
   @override
   void initState() {
@@ -88,10 +90,26 @@ class _SupervisorFuelMonitoringState extends State<SupervisorFuelMonitoring> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Fuel Monitoring', style: theme.textTheme.headlineLarge),
-          const SizedBox(height: 4),
-          Text('Fleet fuel, gas stations, and warehouses',
-              style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Fuel Monitoring', style: theme.textTheme.headlineLarge),
+                  const SizedBox(height: 4),
+                  Text('Fleet fuel, gas stations, and warehouses',
+                      style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                ],
+              ),
+              ActionButton(
+                icon: _showCharts ? Icons.visibility : Icons.visibility_off,
+                label: _showCharts ? 'Hide Charts' : 'Show Charts',
+                color: theme.colorScheme.primary,
+                onTap: () => setState(() => _showCharts = !_showCharts),
+              ),
+            ],
+          ),
           const SizedBox(height: FleetSpacing.lg),
           Row(
             children: [
@@ -121,39 +139,40 @@ class _SupervisorFuelMonitoringState extends State<SupervisorFuelMonitoring> {
             ],
           ),
           const SizedBox(height: FleetSpacing.lg),
-          SizedBox(
-            height: 340,
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: _ChartCard(
-                    title: 'Fuel Levels by Truck',
-                    subtitle: '${trucks.length} trucks',
-                    child: _buildTruckFuelChart(),
+          if (_showCharts)
+            SizedBox(
+              height: 340,
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: _ChartCard(
+                      title: 'Fuel Levels by Truck',
+                      subtitle: '${trucks.length} trucks',
+                      child: _buildTruckFuelChart(),
+                    ),
                   ),
-                ),
-                const SizedBox(width: FleetSpacing.md),
-                Expanded(
-                  flex: 2,
-                  child: _ChartCard(
-                    title: 'Station Stock Levels',
-                    subtitle: '${_stations.length} stations',
-                    child: _buildStationStockChart(),
+                  const SizedBox(width: FleetSpacing.md),
+                  Expanded(
+                    flex: 2,
+                    child: _ChartCard(
+                      title: 'Station Stock Levels',
+                      subtitle: '${_stations.length} stations',
+                      child: _buildStationStockChart(),
+                    ),
                   ),
-                ),
-                const SizedBox(width: FleetSpacing.md),
-                Expanded(
-                  flex: 2,
-                  child: _ChartCard(
-                    title: 'Station Types',
-                    subtitle: 'Gas stations vs Warehouses',
-                    child: _buildStationTypeChart(),
+                  const SizedBox(width: FleetSpacing.md),
+                  Expanded(
+                    flex: 2,
+                    child: _ChartCard(
+                      title: 'Station Types',
+                      subtitle: 'Gas stations vs Warehouses',
+                      child: _buildStationTypeChart(),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           const SizedBox(height: FleetSpacing.lg),
           SizedBox(
             height: 500,

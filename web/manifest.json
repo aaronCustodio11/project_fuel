@@ -1,6 +1,6 @@
 {
-    "name": "project_fuel",
-    "short_name": "project_fuel",
+    "name": "Fleet Sense",
+    "short_name": "Fleet Sense",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -5,6 +5,7 @@ import 'package:project_fuel/core/models/maintenance.dart';
 import 'package:project_fuel/core/services/json_reader.dart';
 import 'package:project_fuel/core/services/maintenance_service.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
+import 'package:project_fuel/shared/widgets/action_button.dart';
 
 class ManagerMaintenance extends StatefulWidget {
   const ManagerMaintenance({super.key});
@@ -17,6 +18,7 @@ class _ManagerMaintenanceState extends State<ManagerMaintenance> {
   List<MaintenanceRecord> _records = [];
   final Map<int, String> _userNames = {};
   bool _isLoading = true;
+  bool _showCharts = true;
 
   @override
   void initState() {
@@ -586,9 +588,21 @@ class _ManagerMaintenanceState extends State<ManagerMaintenance> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Maintenance', style: theme.textTheme.headlineLarge),
-              Text('${_activeRecords.length} active', style: theme.textTheme.labelLarge?.copyWith(
-                color: scheme.onSurfaceVariant,
-              )),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ActionButton(
+                    icon: _showCharts ? Icons.visibility : Icons.visibility_off,
+                    label: _showCharts ? 'Hide Charts' : 'Show Charts',
+                    color: theme.colorScheme.primary,
+                    onTap: () => setState(() => _showCharts = !_showCharts),
+                  ),
+                  const SizedBox(width: FleetSpacing.sm),
+                  Text('${_activeRecords.length} active', style: theme.textTheme.labelLarge?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  )),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: FleetSpacing.md),
@@ -601,7 +615,7 @@ class _ManagerMaintenanceState extends State<ManagerMaintenance> {
                   _buildCostAnalytics(context, totalCost, avgCost, highestCost, inProgCost, completedCost,
                       costTypeLabels, costTypeValues),
                   const SizedBox(height: FleetSpacing.xl),
-                  SizedBox(height: 380, child: _buildChartsRow(context, typeLabels, typeValues, statusCounts)),
+                  if (_showCharts) SizedBox(height: 380, child: _buildChartsRow(context, typeLabels, typeValues, statusCounts)),
                   const SizedBox(height: FleetSpacing.xl),
                   _buildRecordsList(context),
                   const SizedBox(height: FleetSpacing.lg),
@@ -724,51 +738,52 @@ class _ManagerMaintenanceState extends State<ManagerMaintenance> {
           ],
         ),
         const SizedBox(height: FleetSpacing.md),
-        SizedBox(
-          height: 300,
-          child: _ChartCard(
-            title: 'Cost by Type',
-            subtitle: 'Total spending per maintenance category',
-            child: RepaintBoundary(
-              child: ChartTheme(
-                data: ChartTheme.of(context).copyWith(
-                  labelStyle: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                child: BarChart(
-                  data: BarChartData(
-                    series: [
-                      BarSeries.fromValues<double>(
-                        name: 'Cost',
-                        values: typeValues,
-                        color: AppTheme.successGreen,
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF059669), Color(0xFF34D399)],
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                        ),
-                      ),
-                    ],
-                    xAxis: BarXAxisConfig(categories: typeLabels),
-                    yAxis: BarYAxisConfig(
-                      min: 0,
-                      max: 4000,
-                      tickCount: 4,
-                      labelFormatter: (value) => value.toInt().toString(),
+        if (_showCharts)
+          SizedBox(
+            height: 300,
+            child: _ChartCard(
+              title: 'Cost by Type',
+              subtitle: 'Total spending per maintenance category',
+              child: RepaintBoundary(
+                child: ChartTheme(
+                  data: ChartTheme.of(context).copyWith(
+                    labelStyle: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
-                    grouping: BarGrouping.grouped,
-                    direction: BarDirection.vertical,
                   ),
-                  tooltip: const TooltipConfig(enabled: true),
-                  animation: const ChartAnimation.none(),
+                  child: BarChart(
+                    data: BarChartData(
+                      series: [
+                        BarSeries.fromValues<double>(
+                          name: 'Cost',
+                          values: typeValues,
+                          color: AppTheme.successGreen,
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF059669), Color(0xFF34D399)],
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                          ),
+                        ),
+                      ],
+                      xAxis: BarXAxisConfig(categories: typeLabels),
+                      yAxis: BarYAxisConfig(
+                        min: 0,
+                        max: 4000,
+                        tickCount: 4,
+                        labelFormatter: (value) => value.toInt().toString(),
+                      ),
+                      grouping: BarGrouping.grouped,
+                      direction: BarDirection.vertical,
+                    ),
+                    tooltip: const TooltipConfig(enabled: true),
+                    animation: const ChartAnimation.none(),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
       ],
     );
   }
