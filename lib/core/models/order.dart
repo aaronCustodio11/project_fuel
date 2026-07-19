@@ -50,6 +50,7 @@ class Order {
   final DateTime? approvedAt;
   final DateTime? acceptedAt;
   final String? rejectionReason;
+  final String? scheduledTime;
 
   const Order({
     required this.orderId,
@@ -62,6 +63,7 @@ class Order {
     required this.fuelType,
     required this.quantity,
     this.scheduledDate,
+    this.scheduledTime,
     required this.createdAt,
     this.approvedAt,
     this.acceptedAt,
@@ -82,6 +84,7 @@ class Order {
       scheduledDate: json['scheduledDate'] != null
           ? DateTime.tryParse(json['scheduledDate'] as String)
           : null,
+      scheduledTime: json['scheduledTime'] as String?,
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
       approvedAt: json['approvedAt'] != null
@@ -105,6 +108,7 @@ class Order {
         'fuelType': fuelType,
         'quantity': quantity,
         'scheduledDate': scheduledDate?.toIso8601String().split('T')[0],
+        'scheduledTime': scheduledTime,
         'createdAt': createdAt.toIso8601String(),
         'approvedAt': approvedAt?.toIso8601String(),
         'acceptedAt': acceptedAt?.toIso8601String(),
@@ -122,6 +126,7 @@ class Order {
     String? fuelType,
     double? quantity,
     DateTime? scheduledDate,
+    String? scheduledTime,
     DateTime? createdAt,
     DateTime? approvedAt,
     DateTime? acceptedAt,
@@ -138,6 +143,7 @@ class Order {
       fuelType: fuelType ?? this.fuelType,
       quantity: quantity ?? this.quantity,
       scheduledDate: scheduledDate ?? this.scheduledDate,
+      scheduledTime: scheduledTime ?? this.scheduledTime,
       createdAt: createdAt ?? this.createdAt,
       approvedAt: approvedAt ?? this.approvedAt,
       acceptedAt: acceptedAt ?? this.acceptedAt,

@@ -480,9 +480,18 @@ class _SupervisorDashboardState extends State<SupervisorDashboard>
     final scheme = theme.colorScheme;
     final depotName = _stationNames[order.depotId] ?? order.depotId;
     final stationName = _stationNames[order.stationId] ?? order.stationId;
+    final ambientHour = order.scheduledTime != null
+        ? int.tryParse(order.scheduledTime!.split(':').first)
+        : null;
+    final ambientTemp = DeliveryConditions.getAmbientTemp(
+      date: order.scheduledDate,
+      hour: ambientHour,
+    );
     final warning = DeliveryConditions.getWarning(
-      DeliveryConditions.mockAmbientTemp,
+      ambientTemp,
       order.fuelType,
+      date: order.scheduledDate,
+      hour: ambientHour,
     );
 
     return Container(

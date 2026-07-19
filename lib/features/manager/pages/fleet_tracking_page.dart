@@ -52,6 +52,7 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
   final _orderFuelTypeCtrl = TextEditingController(text: 'Diesel');
   final _orderQuantityCtrl = TextEditingController();
   DateTime _orderScheduledDate = DateTime.now().add(const Duration(days: 1));
+  TimeOfDay _orderScheduledTime = const TimeOfDay(hour: 14, minute: 0);
   final _orderService = OrderService();
   bool _showCharts = true;
 
@@ -486,7 +487,7 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
         height: size,
         child: RoleBadge(
           icon: isGas ? Icons.local_gas_station_rounded : Icons.warehouse_outlined,
-          color: isGas ? AppTheme.accentBlue : AppTheme.brandBlue,
+          color: isGas ? AppTheme.stationGas : AppTheme.stationDepot,
           onTap: () => _onItemTap(station),
           borderWidth: selected ? 4 : 3,
           glowOpacity: selected ? 0.6 : 0.4,
@@ -503,7 +504,7 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
       height: 46,
       child: RoleBadge(
         icon: Icons.local_gas_station_rounded,
-        color: AppTheme.accentBlue,
+        color: AppTheme.stationGas,
         size: 44,
       ),
     );
@@ -786,6 +787,7 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
                     _orderDepot = null;
                     _orderStation = null;
                     _orderQuantityCtrl.clear();
+                    _orderScheduledTime = const TimeOfDay(hour: 14, minute: 0);
                   }),
                   visualDensity: VisualDensity.compact,
                 ),
@@ -796,14 +798,14 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
               icon: Icons.warehouse_outlined,
               label: 'Fuel Source (Depot)',
               station: _orderDepot,
-              color: AppTheme.brandBlue,
+              color: AppTheme.stationDepot,
             ),
             const SizedBox(height: FleetSpacing.sm),
             _buildOrderLocationTile(
               icon: Icons.local_gas_station_rounded,
               label: 'Delivery Destination',
               station: _orderStation,
-              color: AppTheme.accentBlue,
+              color: AppTheme.stationGas,
             ),
             const SizedBox(height: FleetSpacing.md),
             DropdownButtonFormField<String>(
@@ -851,15 +853,45 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
                 ),
               ),
             ),
+            const SizedBox(height: FleetSpacing.sm),
+            InkWell(
+              onTap: () => _pickScheduledTime(),
+              borderRadius: BorderRadius.circular(FleetRadius.sm),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Scheduled Time',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(FleetRadius.sm)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.access_time, size: 16, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: FleetSpacing.sm),
+                    Text(
+                      _orderScheduledTime.format(context),
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: FleetSpacing.md),
             if (_orderDepot != null && _orderStation != null) ...[
               WarningCard(
                 message: DeliveryConditions.getWarning(
-                  DeliveryConditions.mockAmbientTemp,
+                  DeliveryConditions.getAmbientTemp(
+                    date: _orderScheduledDate,
+                    hour: _orderScheduledTime.hour,
+                  ),
                   _orderFuelTypeCtrl.text,
+                  date: _orderScheduledDate,
+                  hour: _orderScheduledTime.hour,
                 ),
                 isActive: DeliveryConditions.hasActiveWarning(
-                  DeliveryConditions.mockAmbientTemp,
+                  DeliveryConditions.getAmbientTemp(
+                    date: _orderScheduledDate,
+                    hour: _orderScheduledTime.hour,
+                  ),
                 ),
               ),
               const SizedBox(height: FleetSpacing.md),
@@ -935,7 +967,17 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
       lastDate: DateTime.now().add(const Duration(days: 180)),
     );
     if (picked != null && mounted) {
-      setState(() => _orderScheduledDate = picked);
+      setState(() =>                              _orderScheduledDate = picked);
+    }
+  }
+
+  Future<void> _pickScheduledTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _orderScheduledTime,
+    );
+    if (picked != null && mounted) {
+      setState(() => _orderScheduledTime = picked);
     }
   }
 
@@ -963,6 +1005,7 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
       fuelType: _orderFuelTypeCtrl.text,
       quantity: quantity,
       scheduledDate: _orderScheduledDate,
+      scheduledTime: '${_orderScheduledTime.hour.toString().padLeft(2, '0')}:${_orderScheduledTime.minute.toString().padLeft(2, '0')}',
       createdAt: DateTime.now(),
     );
 
@@ -974,6 +1017,7 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
       _orderDepot = null;
       _orderStation = null;
       _orderQuantityCtrl.clear();
+      _orderScheduledTime = const TimeOfDay(hour: 14, minute: 0);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1538,7 +1582,7 @@ class _DetailPanel extends StatelessWidget {
             Center(
               child: RoleBadge(
                 icon: isGas ? Icons.local_gas_station_rounded : Icons.warehouse_outlined,
-                color: isGas ? AppTheme.accentBlue : AppTheme.brandBlue,
+                color: isGas ? AppTheme.stationGas : AppTheme.stationDepot,
                 size: 64,
               ),
             ),
