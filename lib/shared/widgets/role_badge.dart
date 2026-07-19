@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project_fuel/core/theme/app_theme.dart';
 
 class RoleBadge extends StatelessWidget {
   const RoleBadge({
@@ -85,7 +86,7 @@ _RoleBadgeConfig _resolveConfig(String role, ThemeData theme) {
   switch (role) {
     case 'station':
       return const _RoleBadgeConfig(
-        color: Colors.orangeAccent,
+        color: AppTheme.stationGas,
         icon: Icons.local_gas_station_rounded,
       );
     case 'driver':

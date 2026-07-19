@@ -11,11 +11,16 @@ class AppTheme {
   static const Color accentBlue = Color(0xFF2E6FE0);
   static const Color dangerRed = Color(0xFFD93025);
   static const Color warningAmber = Color(0xFFF5A623);
-  static const Color successGreen = Color(0xFF2E6FE0);
+  static const Color successGreen = Color(0xFF16A34A);
   static const Color neutralGray900 = Color(0xFF1A1D21);
   static const Color neutralGray500 = Color(0xFF6B7280);
   static const Color neutralGray200 = Color(0xFFE5E7EB);
   static const Color neutralGray50 = Color(0xFFF7F8FA);
+
+  // Entity-specific marker colors for maps
+  static const Color truckMoving = Color(0xFF16A34A);
+  static const Color stationGas = Color(0xFFFFAB40);
+  static const Color stationDepot = Color(0xFF1565C0);
 
   static ThemeData lightTheme = buildFleetSenseTheme(Brightness.light);
   static ThemeData darkTheme = buildFleetSenseTheme(Brightness.dark);

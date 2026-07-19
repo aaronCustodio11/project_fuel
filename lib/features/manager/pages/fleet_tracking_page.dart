@@ -15,6 +15,7 @@ import 'package:project_fuel/core/services/order_service.dart';
 import 'package:project_fuel/core/services/osrm_routing.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:project_fuel/shared/widgets/action_button.dart';
+import 'package:project_fuel/shared/widgets/map_legend.dart';
 import 'package:project_fuel/shared/widgets/warning_card.dart';
 
 class ManagerFleetTracking extends StatefulWidget {
@@ -297,7 +298,7 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
   }
 
   Color _truckStatusColor(TruckStatus s) => switch (s) {
-    TruckStatus.moving => AppTheme.successGreen,
+    TruckStatus.moving => AppTheme.truckMoving,
     TruckStatus.idle => AppTheme.warningAmber,
     TruckStatus.maintenance => AppTheme.dangerRed,
     TruckStatus.offDuty => AppTheme.neutralGray500,
@@ -377,7 +378,7 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
                     ActionButton(
                       icon: Icons.notifications_outlined,
                       label: 'Notify Truck',
-                      color: AppTheme.accentBlue,
+        color: AppTheme.stationGas,
                       onTap: _showNotifyTruckSheet,
                     ),
                   ],
@@ -643,8 +644,13 @@ class _ManagerFleetTrackingState extends State<ManagerFleetTracking> {
               ),
             ),
           ),
+        Positioned(
+          left: 12,
+          bottom: 12,
+          child: const MapLegend(),
+        ),
       ],
-    );
+      );
   }
 
   Widget _buildSidePanel() {
@@ -1395,7 +1401,7 @@ class _StationList extends StatelessWidget {
                             Icon(
                               isGas ? Icons.local_gas_station_rounded : Icons.warehouse_outlined,
                               size: 16,
-                              color: isGas ? AppTheme.accentBlue : AppTheme.brandBlue,
+          color: isGas ? AppTheme.stationGas : AppTheme.stationDepot,
                             ),
                             const SizedBox(width: FleetSpacing.sm),
                             Expanded(

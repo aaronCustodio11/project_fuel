@@ -12,6 +12,7 @@ import 'package:project_fuel/core/services/navigation_simulator.dart';
 import 'package:project_fuel/core/services/osrm_routing.dart';
 import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:project_fuel/shared/widgets/action_button.dart';
+import 'package:project_fuel/shared/widgets/map_legend.dart';
 import 'package:project_fuel/shared/widgets/role_badge.dart';
 
 class SupervisorFleetTracking extends StatefulWidget {
@@ -297,7 +298,7 @@ class _SupervisorFleetTrackingState extends State<SupervisorFleetTracking> {
   }
 
   Color _truckStatusColor(TruckStatus s) => switch (s) {
-    TruckStatus.moving => const Color(0xFF16A34A),
+    TruckStatus.moving => AppTheme.truckMoving,
     TruckStatus.idle => AppTheme.warningAmber,
     TruckStatus.maintenance => AppTheme.dangerRed,
     TruckStatus.offDuty => AppTheme.neutralGray500,
@@ -462,7 +463,7 @@ class _SupervisorFleetTrackingState extends State<SupervisorFleetTracking> {
         height: size,
         child: RoleBadge(
           icon: isGas ? Icons.local_gas_station_rounded : Icons.warehouse_outlined,
-          color: isGas ? Colors.orangeAccent : const Color(0xFF1565C0),
+          color: isGas ? AppTheme.stationGas : AppTheme.stationDepot,
           onTap: () => _onItemTap(station),
           borderWidth: selected ? 4 : 3,
           glowOpacity: selected ? 0.6 : 0.4,
@@ -479,7 +480,7 @@ class _SupervisorFleetTrackingState extends State<SupervisorFleetTracking> {
       height: 46,
       child: RoleBadge(
         icon: Icons.local_gas_station_rounded,
-        color: AppTheme.accentBlue,
+        color: AppTheme.stationGas,
         size: 44,
         tooltip: stop.name,
       ),
@@ -611,12 +612,17 @@ class _SupervisorFleetTrackingState extends State<SupervisorFleetTracking> {
               ),
             ),
           ),
-      ],
-    );
-  }
+          Positioned(
+            left: 12,
+            bottom: 12,
+            child: const MapLegend(),
+          ),
+        ],
+      );
+    }
 
-  Widget _buildSidePanel() {
-    return _trackingTruck != null && _trackedStops.isNotEmpty
+    Widget _buildSidePanel() {
+      return _trackingTruck != null && _trackedStops.isNotEmpty
         ? _DeliveryTrackerPanel(
             truck: _trackingTruck!,
             stops: _trackedStops,
@@ -1384,7 +1390,7 @@ class _DeliveryTrackerPanel extends StatelessWidget {
   });
 
   Color _statusColor(TruckStatus s) => switch (s) {
-    TruckStatus.moving => AppTheme.successGreen,
+    TruckStatus.moving => AppTheme.truckMoving,
     TruckStatus.idle => AppTheme.warningAmber,
     TruckStatus.maintenance => AppTheme.dangerRed,
     TruckStatus.offDuty => AppTheme.neutralGray500,
@@ -1931,7 +1937,7 @@ class _StationDetail extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isGas = station.type == StationType.gasStation;
-    final color = isGas ? AppTheme.accentBlue : AppTheme.brandBlue;
+    final color = isGas ? AppTheme.stationGas : AppTheme.stationDepot;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(FleetSpacing.lg),

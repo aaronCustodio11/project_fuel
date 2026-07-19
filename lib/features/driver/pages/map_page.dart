@@ -8,6 +8,7 @@ import 'package:project_fuel/core/services/authentication.dart';
 import 'package:project_fuel/core/services/deliveries.dart';
 import 'package:project_fuel/core/services/navigation_simulator.dart';
 import 'package:project_fuel/core/services/osrm_routing.dart';
+import 'package:project_fuel/core/theme/app_theme.dart';
 import 'package:project_fuel/shared/widgets/role_badge.dart';
 
 class DriverMapPage extends StatefulWidget {
@@ -351,7 +352,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
               height: 46,
               child: RoleBadge(
                 size: 46,
-                color: const Color(0xFF1565C0),
+                color: AppTheme.stationDepot,
                 icon: Icons.warehouse_rounded,
                 tooltip: d.sourceStationName,
               ),
@@ -368,7 +369,7 @@ class _DriverMapPageState extends State<DriverMapPage> {
             height: 46,
             child: RoleBadge(
               size: 46,
-              color: Colors.orangeAccent,
+              color: AppTheme.stationGas,
               icon: Icons.local_gas_station_rounded,
               tooltip: d.stationName,
             ),
