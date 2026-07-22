@@ -154,7 +154,7 @@ class _SupervisorFuelMonitoringState extends State<SupervisorFuelMonitoring> {
                   ),
                   const SizedBox(width: FleetSpacing.md),
                   Expanded(
-                    flex: 2,
+                    flex: 3,
                     child: _ChartCard(
                       title: 'Station Stock Levels',
                       subtitle: '${_stations.length} stations',
@@ -249,7 +249,10 @@ class _SupervisorFuelMonitoringState extends State<SupervisorFuelMonitoring> {
   }
 
   Widget _buildStationStockChart() {
-    final labels = _stations.map((s) => s.name.split(' ').first).toList();
+    final labels = _stations.map((s) {
+      final name = s.name.split(' ').first;
+      return name.length > 6 ? '${name.substring(0, 6)}.' : name;
+    }).toList();
     final values = _stations.map((s) => s.capacity > 0 ? (s.currentStock / s.capacity) * 100 : 0.0).toList();
 
     return RepaintBoundary(

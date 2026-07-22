@@ -183,8 +183,8 @@ class _ManagerFuelMonitoringState extends State<ManagerFuelMonitoring> {
 
   Widget _buildStockChart() {
     final labels = _stations.map((s) {
-      final parts = s.name.split(' ');
-      return parts.length > 2 ? '${parts[0]} ${parts[1]}' : s.name;
+      final name = s.name.split(' ').first;
+      return name.length > 6 ? '${name.substring(0, 6)}.' : name;
     }).toList();
     final values = _stations.map((s) => (s.currentStock / s.capacity) * 100).toList();
 
